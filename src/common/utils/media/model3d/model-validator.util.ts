@@ -1,9 +1,5 @@
 import * as fs from 'fs/promises';
-
-/**
- * Model format enum
- */
-export type ModelFormat = 'gltf' | 'glb' | 'obj' | 'fbx';
+import { ModelFormat } from './types';
 
 /**
  * Validation result

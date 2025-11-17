@@ -15,9 +15,9 @@ export interface CDNOptions {
 }
 
 /**
- * S3 Configuration
+ * CDN S3 Configuration
  */
-export interface S3Config {
+export interface CDNS3Config {
   region: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -29,7 +29,7 @@ export interface S3Config {
  * Handles uploads to CDN and cloud storage
  */
 export class CDNUploader {
-  private static createS3Client(config?: S3Config): S3Client {
+  private static createS3Client(config?: CDNS3Config): S3Client {
     const region = config?.region || process.env.AWS_REGION || 'us-east-1';
     const credentials = config
       ? {
@@ -57,7 +57,7 @@ export class CDNUploader {
     file: Buffer,
     path: string,
     options: CDNOptions = {},
-    config?: S3Config,
+    config?: CDNS3Config,
   ): Promise<string> {
     try {
       const s3Client = this.createS3Client(config);
@@ -97,7 +97,7 @@ export class CDNUploader {
     files: Map<string, Buffer>,
     basePath: string,
     options: CDNOptions = {},
-    config?: S3Config,
+    config?: CDNS3Config,
   ): Promise<Map<string, string>> {
     try {
       const urls = new Map<string, string>();
@@ -132,7 +132,7 @@ export class CDNUploader {
     path: string,
     expiresIn: number = 3600,
     options: CDNOptions = {},
-    config?: S3Config,
+    config?: CDNS3Config,
   ): Promise<string> {
     try {
       const s3Client = this.createS3Client(config);
@@ -245,7 +245,7 @@ export class CDNUploader {
     filename: string,
     prefix?: string,
     options: CDNOptions = {},
-    config?: S3Config,
+    config?: CDNS3Config,
   ): Promise<{ url: string; path: string }> {
     try {
       const path = this.generateUniquePath(filename, prefix);

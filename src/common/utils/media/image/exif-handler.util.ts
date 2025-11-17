@@ -44,11 +44,11 @@ export class ExifHandler {
       if (tags.Make) exifData.make = tags.Make.description;
       if (tags.Model) exifData.model = tags.Model.description;
       if (tags.DateTime) exifData.dateTime = tags.DateTime.description;
-      if (tags.Orientation) exifData.orientation = tags.Orientation.value;
+      if (tags.Orientation) exifData.orientation = typeof tags.Orientation.value === 'number' ? tags.Orientation.value : Number(tags.Orientation.value);
       if (tags.Software) exifData.software = tags.Software.description;
       if (tags.ExposureTime) exifData.exposureTime = tags.ExposureTime.description;
       if (tags.FNumber) exifData.fNumber = tags.FNumber.description;
-      if (tags.ISOSpeedRatings) exifData.iso = tags.ISOSpeedRatings.value;
+      if (tags.ISOSpeedRatings) exifData.iso = typeof tags.ISOSpeedRatings.value === 'number' ? tags.ISOSpeedRatings.value : Number(tags.ISOSpeedRatings.value);
       if (tags.FocalLength) exifData.focalLength = tags.FocalLength.description;
       if (tags.Flash) exifData.flash = tags.Flash.description;
       if (tags.WhiteBalance) exifData.whiteBalance = tags.WhiteBalance.description;
@@ -83,9 +83,8 @@ export class ExifHandler {
         .withMetadata({
           exif: {},
           icc: undefined,
-          iptc: undefined,
           xmp: undefined,
-        })
+        } as any)
         .toBuffer();
     } catch (error) {
       throw new Error(
@@ -174,7 +173,7 @@ export class ExifHandler {
 
       return await sharp(image)
         .withMetadata({
-          exif: exifData,
+          exif: exifData as any,
         })
         .toBuffer();
     } catch (error) {
@@ -205,7 +204,7 @@ export class ExifHandler {
 
       return await sharp(image)
         .withMetadata({
-          exif: exifData,
+          exif: exifData as any,
         })
         .toBuffer();
     } catch (error) {

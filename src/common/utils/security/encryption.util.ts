@@ -65,7 +65,7 @@ export class EncryptionUtil {
     encrypted += cipher.final('hex');
 
     // Get auth tag (for GCM mode)
-    const authTag = cipher.getAuthTag();
+    const authTag = (cipher as any).getAuthTag();
 
     return {
       encrypted,
@@ -99,7 +99,7 @@ export class EncryptionUtil {
 
     // Create decipher
     const decipher = crypto.createDecipheriv(algorithm, decryptionKey, iv);
-    decipher.setAuthTag(authTag);
+    (decipher as any).setAuthTag(authTag);
 
     // Decrypt
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');

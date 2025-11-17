@@ -46,10 +46,10 @@ export class MultipartHandler {
 
   /**
    * Create S3 client
-   * @param config - S3 configuration
+   * @param config - Multipart S3 configuration
    * @returns S3 client
    */
-  private static createS3Client(config?: S3Config): S3Client {
+  private static createS3Client(config?: MultipartS3Config): S3Client {
     const region = config?.region || process.env.AWS_REGION || 'us-east-1';
     const credentials = config ? {
       accessKeyId: config.accessKeyId,
@@ -77,7 +77,7 @@ export class MultipartHandler {
     bucket: string,
     key: string,
     totalSize: number,
-    config?: S3Config,
+    config?: MultipartS3Config,
     metadata?: Record<string, string>,
     contentType?: string,
   ): Promise<string> {
@@ -129,7 +129,7 @@ export class MultipartHandler {
     uploadId: string,
     partNumber: number,
     data: Buffer,
-    config?: S3Config,
+    config?: MultipartS3Config,
   ): Promise<PartETag> {
     try {
       const state = this.uploads.get(uploadId);
@@ -182,7 +182,7 @@ export class MultipartHandler {
   static async uploadPartsParallel(
     uploadId: string,
     parts: Array<{ partNumber: number; data: Buffer }>,
-    config?: S3Config,
+    config?: MultipartS3Config,
     concurrency: number = 4,
   ): Promise<PartETag[]> {
     const results: PartETag[] = [];
@@ -211,7 +211,7 @@ export class MultipartHandler {
   static async complete(
     uploadId: string,
     parts?: PartETag[],
-    config?: S3Config,
+    config?: MultipartS3Config,
   ): Promise<string> {
     try {
       const state = this.uploads.get(uploadId);
@@ -287,7 +287,7 @@ export class MultipartHandler {
    */
   static async listParts(
     uploadId: string,
-    config?: S3Config,
+    config?: MultipartS3Config,
   ): Promise<PartETag[]> {
     try {
       const state = this.uploads.get(uploadId);

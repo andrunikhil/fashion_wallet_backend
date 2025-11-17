@@ -3,6 +3,7 @@
  * Exports all 3D model-related utilities for media processing
  */
 
+export * from './types';
 export * from './model-validator.util';
 export * from './model-optimizer.util';
 export * from './model-converter.util';

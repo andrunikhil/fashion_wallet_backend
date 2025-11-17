@@ -15,7 +15,7 @@ import {
   ProcessingJobStatus,
   ProcessingJobType,
 } from '../../../infrastructure/database/entities/processing-job.entity';
-import { MeasurementSource } from '../../../infrastructure/database/entities/measurement.entity';
+import { MeasurementSource, MeasurementUnit } from '../../../infrastructure/database/entities/measurement.entity';
 
 @Processor('avatar-processing')
 export class AvatarProcessingProcessor {
@@ -41,13 +41,18 @@ export class AvatarProcessingProcessor {
 
     try {
       // Create processing job record
+      const photoUrlsArray = Object.values(photoUrls).filter(Boolean) as string[];
       await this.processingJobRepo.create({
         id: job.id as string,
         avatarId,
         userId,
         jobType: ProcessingJobType.PHOTO_PROCESSING,
         status: ProcessingJobStatus.PROCESSING,
-        inputData: { photoUrls, unit, customization },
+        inputData: {
+          photoUrls: photoUrlsArray,
+          unit,
+          customization,
+        },
         startedAt: new Date(),
       });
 
@@ -98,10 +103,10 @@ export class AvatarProcessingProcessor {
         inseamLength: measurements.inseam,
         neckCircumference: measurements.neckCircumference,
         thighCircumference: measurements.thighCircumference,
-        unit: measurements.unit === 'metric' ? 'metric' : 'imperial',
+        unit: measurements.unit === 'metric' ? MeasurementUnit.METRIC : MeasurementUnit.IMPERIAL,
         source: MeasurementSource.AUTO,
         confidenceScore: measurements.confidence,
-        metadata: { landmarks },
+        metadata: { landmarks: landmarks as any },
       });
 
       // Step 7: Update avatar with body type (90%)

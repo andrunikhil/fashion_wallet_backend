@@ -1,7 +1,4 @@
-/**
- * Model format type
- */
-export type ModelFormat = 'gltf' | 'glb' | 'obj' | 'fbx' | 'stl' | 'dae';
+import { ModelFormat } from './types';
 
 /**
  * Conversion options
