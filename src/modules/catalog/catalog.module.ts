@@ -32,9 +32,14 @@ import {
 
 // Controllers
 import { CatalogController } from './controllers/catalog.controller';
+import { CollectionController } from './controllers/collection.controller';
+import { BrandPartnerController } from './controllers/brand-partner.controller';
 
 // Services
 import { CatalogService } from './services/catalog.service';
+import { CatalogManagementService } from './services/catalog-management.service';
+import { CollectionService } from './services/collection.service';
+import { BrandPartnerService } from './services/brand-partner.service';
 
 // Configurations
 import {
@@ -68,9 +73,16 @@ import {
       { name: CatalogFlexible.name, schema: CatalogFlexibleSchema },
     ]),
   ],
-  controllers: [CatalogController],
+  controllers: [
+    CatalogController,
+    CollectionController,
+    BrandPartnerController,
+  ],
   providers: [
     CatalogService,
+    CatalogManagementService,
+    CollectionService,
+    BrandPartnerService,
     CatalogItemRepository,
     BrandPartnerRepository,
     CollectionRepository,
@@ -80,6 +92,9 @@ import {
   ],
   exports: [
     CatalogService,
+    CatalogManagementService,
+    CollectionService,
+    BrandPartnerService,
     CatalogItemRepository,
     BrandPartnerRepository,
     CollectionRepository,
