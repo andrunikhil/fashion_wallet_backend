@@ -1,0 +1,137 @@
+groups:
+  - name: catalog_alerts
+    interval: 30s
+    rules:
+      # High Error Rate Alert
+      - alert: CatalogHighErrorRate
+        expr: rate(catalog_http_request_errors_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          service: catalog
+        annotations:
+          summary: "High error rate in catalog service"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 1%)"
+
+      # Slow Response Time Alert
+      - alert: CatalogSlowResponseTime
+        expr: histogram_quantile(0.95, rate(catalog_http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: catalog
+        annotations:
+          summary: "Slow response times in catalog service"
+          description: "95th percentile response time is {{ $value }}s (threshold: 0.5s)"
+
+      # Search Performance Alert
+      - alert: CatalogSearchSlow
+        expr: histogram_quantile(0.90, rate(catalog_search_duration_seconds_bucket[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          service: catalog
+        annotations:
+          summary: "Search operations are slow"
+          description: "90th percentile search time is {{ $value }}s (threshold: 0.2s)"
+
+      # Low Cache Hit Rate Alert
+      - alert: CatalogLowCacheHitRate
+        expr: |
+          (sum(rate(catalog_cache_hits_total[5m])) /
+           (sum(rate(catalog_cache_hits_total[5m])) + sum(rate(catalog_cache_misses_total[5m])))) < 0.6
+        for: 10m
+        labels:
+          severity: warning
+          service: catalog
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 60%)"
+
+      # Database Query Performance Alert
+      - alert: CatalogSlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(catalog_db_query_duration_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: catalog
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile DB query time is {{ $value }}s (threshold: 0.1s)"
+
+      # High Database Error Rate Alert
+      - alert: CatalogDatabaseErrors
+        expr: rate(catalog_db_query_errors_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          service: catalog
+        annotations:
+          summary: "High database error rate"
+          description: "Database error rate is {{ $value | humanizePercentage }}"
+
+      # Recommendation Performance Alert
+      - alert: CatalogRecommendationsSlow
+        expr: histogram_quantile(0.90, rate(catalog_recommendation_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: catalog
+        annotations:
+          summary: "Recommendation operations are slow"
+          description: "90th percentile recommendation time is {{ $value }}s (threshold: 0.5s)"
+
+      # High Request Rate Alert (possible DDoS)
+      - alert: CatalogHighRequestRate
+        expr: sum(rate(catalog_http_requests_total[1m])) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          service: catalog
+        annotations:
+          summary: "Unusually high request rate"
+          description: "Request rate is {{ $value }} req/s (threshold: 1000 req/s)"
+
+      # Service Down Alert
+      - alert: CatalogServiceDown
+        expr: up{job="catalog-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: catalog
+        annotations:
+          summary: "Catalog service is down"
+          description: "Catalog service has been down for more than 1 minute"
+
+      # Redis Connection Alert
+      - alert: CatalogRedisConnectionFailed
+        expr: catalog_cache_size{layer="L2"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: catalog
+        annotations:
+          summary: "Redis connection failed"
+          description: "L2 cache (Redis) appears to be unavailable"
+
+      # Memory Usage Alert
+      - alert: CatalogHighMemoryUsage
+        expr: process_resident_memory_bytes{job="catalog-service"} > 1e9
+        for: 5m
+        labels:
+          severity: warning
+          service: catalog
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanize1024 }} (threshold: 1GB)"
+
+      # CPU Usage Alert
+      - alert: CatalogHighCPUUsage
+        expr: rate(process_cpu_seconds_total{job="catalog-service"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: catalog
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | humanizePercentage }} (threshold: 80%)"
