@@ -11,6 +11,8 @@
  * - Date/Time: Formatting, parsing, timezone handling, and date arithmetic
  * - Object/Array: Deep cloning, merging, grouping, and sorting
  * - File: MIME type detection, validation, and path operations
+ * - Media: Image/video processing, optimization, and analysis
+ * - Storage: S3 and cloud storage operations
  *
  * Usage:
  * ```typescript
@@ -23,7 +25,10 @@
  *   StringUtil,
  *   DateUtil,
  *   ObjectUtil,
- *   FileUtil
+ *   FileUtil,
+ *   ImageUtil,
+ *   VideoUtil,
+ *   S3Util
  * } from '@/common/utils';
  * ```
  */
@@ -54,3 +59,22 @@ export * from './object';
 
 // File utilities
 export * from './file';
+
+// Image utilities
+export { ImageUtil } from './media/image/image.util';
+export { ImageConverter } from './media/image/image-converter.util';
+export { ImageOptimizer } from './media/image/image-optimizer.util';
+export { ThumbnailGenerator } from './media/image/thumbnail-generator.util';
+export { ImageAnalyzer } from './media/image/image-analyzer.util';
+
+// Video utilities
+export { VideoUtil } from './media/video/video.util';
+
+// 3D Model utilities
+export { Model3DUtil } from './media/model3d/model3d.util';
+
+// Storage utilities
+export { S3Util } from './storage/s3.util';
+
+// Media types
+export * from '../types/media.types';
