@@ -4,8 +4,8 @@
  */
 
 export * from './texture-validator.util';
+export * from './texture-optimizer.util';
+export * from './normal-map-generator.util';
 
 // Note: Additional utilities to be implemented:
-// - texture-optimizer.util.ts (texture optimization)
-// - normal-map-generator.util.ts (normal map generation)
 // - pbr-processor.util.ts (PBR texture processing)

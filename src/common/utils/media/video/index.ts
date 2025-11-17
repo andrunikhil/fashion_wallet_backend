@@ -4,8 +4,6 @@
  */
 
 export * from './video-processor.util';
-
-// Note: Additional utilities to be implemented:
-// - video-encoder.util.ts (encoding with different codecs)
-// - thumbnail-extractor.util.ts (extract frames/thumbnails)
-// - turntable-generator.util.ts (360° video generation)
+export * from './video-encoder.util';
+export * from './thumbnail-extractor.util';
+export * from './turntable-generator.util';

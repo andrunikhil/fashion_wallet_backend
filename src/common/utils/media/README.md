@@ -349,29 +349,42 @@ S3_ENDPOINT=https://custom-s3-endpoint.com
 - ✅ MIME type detection (magic numbers + extension)
 - ✅ Temporary file management with TTL
 - ✅ Progress tracking for uploads
+- ✅ Malware scanning (basic pattern detection)
 
 ### Image Processing
 - ✅ Resize, crop, rotate, flip
 - ✅ Format conversion (JPEG, PNG, WebP, AVIF)
 - ✅ Image optimization and compression
-- ✅ Thumbnail generation (multiple sizes)
+- ✅ Thumbnail generation (multiple sizes, responsive sets)
 - ✅ EXIF data extraction and manipulation
 - ✅ Color analysis and palette extraction
 - ✅ Background removal (placeholder for ML integration)
+- ✅ Smart crop with attention-based detection
 
 ### 3D Model Processing
 - ✅ Model validation (GLTF, GLB, OBJ, FBX)
 - ✅ Structure validation
 - ✅ Model statistics extraction
+- ✅ Model format conversion (GLTF ↔ GLB, OBJ → GLTF)
+- ✅ LOD (Level of Detail) generation structure
+- ✅ Model optimization framework
 - ⏳ Draco compression (requires gltf-pipeline setup)
-- ⏳ Mesh simplification (requires additional library)
-- ⏳ LOD generation (future implementation)
+- ⏳ Mesh simplification (requires meshoptimizer library)
 
 ### Video Processing
-- ✅ Basic video processing structure
-- ⏳ Format conversion (requires FFmpeg setup)
-- ⏳ Compression and encoding (requires FFmpeg setup)
-- ⏳ Thumbnail extraction (requires FFmpeg setup)
+- ✅ Video encoding utilities (H.264, HEVC, VP9)
+- ✅ Thumbnail extraction from video
+- ✅ Turntable 360° video generation
+- ✅ Animated GIF creation
+- ✅ Video sprite sheet generation
+- ⏳ FFmpeg integration for actual processing
+
+### Texture Processing
+- ✅ Texture validation (tiling, power-of-2, format)
+- ✅ Texture optimization (resize, compress, mipmaps)
+- ✅ Normal map generation from height maps
+- ✅ Mipmap generation
+- ⏳ Basis Universal compression
 
 ### CDN Integration
 - ✅ S3/CDN upload
