@@ -1,23 +1,39 @@
 module.exports = {
-  moduleFileExtensions: ['js', 'json', 'ts'],
-  rootDir: 'src',
-  testRegex: '.*\\.spec\\.ts$',
-  transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
-  },
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src', '<rootDir>/test'],
+  testMatch: [
+    '**/__tests__/**/*.ts',
+    '**/*.spec.ts',
+    '**/*.test.ts'
+  ],
   collectCoverageFrom: [
-    '**/*.(t|j)s',
-    '!**/*.spec.ts',
+    'src/**/*.ts',
+    '!src/**/*.dto.ts',
+    '!src/**/*.entity.ts',
+    '!src/**/*.interface.ts',
+    '!src/main.ts',
     '!**/node_modules/**',
     '!**/dist/**',
   ],
-  coverageDirectory: '../coverage',
-  testEnvironment: 'node',
-  moduleNameMapper: {
-    '^@avatar/(.*)$': '<rootDir>/modules/avatar/$1',
-    '^@catalog/(.*)$': '<rootDir>/modules/catalog/$1',
-    '^@design/(.*)$': '<rootDir>/modules/design/$1',
-    '^@shared/(.*)$': '<rootDir>/shared/$1',
-    '^@config/(.*)$': '<rootDir>/config/$1',
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    }
   },
+  setupFilesAfterEnv: ['<rootDir>/test/setup.ts'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@test/(.*)$': '<rootDir>/test/$1',
+    '^@avatar/(.*)$': '<rootDir>/src/modules/avatar/$1',
+    '^@catalog/(.*)$': '<rootDir>/src/modules/catalog/$1',
+    '^@design/(.*)$': '<rootDir>/src/modules/design/$1',
+    '^@shared/(.*)$': '<rootDir>/src/shared/$1',
+    '^@config/(.*)$': '<rootDir>/src/config/$1',
+  },
+  testTimeout: 10000,
+  maxWorkers: '50%'
 };
