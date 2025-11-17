@@ -35,6 +35,7 @@ import { CatalogController } from './controllers/catalog.controller';
 import { CollectionController } from './controllers/collection.controller';
 import { BrandPartnerController } from './controllers/brand-partner.controller';
 import { SearchController } from './controllers/search.controller';
+import { RecommendationController } from './controllers/recommendation.controller';
 
 // Services
 import { CatalogService } from './services/catalog.service';
@@ -44,6 +45,16 @@ import { BrandPartnerService } from './services/brand-partner.service';
 import { ElasticsearchService } from './services/elasticsearch.service';
 import { CatalogSearchService } from './services/catalog-search.service';
 import { CatalogReindexService } from './services/catalog-reindex.service';
+import { RecommendationService } from './services/recommendation.service';
+import { UserInteractionService } from './services/user-interaction.service';
+
+// Gateways
+import { CatalogGateway } from './gateways/catalog.gateway';
+
+// Resolvers
+import { CatalogResolver } from './resolvers/catalog.resolver';
+import { SearchResolver } from './resolvers/search.resolver';
+import { RecommendationResolver } from './resolvers/recommendation.resolver';
 
 // Configurations
 import {
@@ -82,8 +93,10 @@ import {
     CollectionController,
     BrandPartnerController,
     SearchController,
+    RecommendationController,
   ],
   providers: [
+    // Services
     CatalogService,
     CatalogManagementService,
     CollectionService,
@@ -91,12 +104,21 @@ import {
     ElasticsearchService,
     CatalogSearchService,
     CatalogReindexService,
+    RecommendationService,
+    UserInteractionService,
+    // Repositories
     CatalogItemRepository,
     BrandPartnerRepository,
     CollectionRepository,
     CollectionItemRepository,
     UserFavoriteRepository,
     CatalogFlexibleRepository,
+    // Gateways
+    CatalogGateway,
+    // Resolvers
+    CatalogResolver,
+    SearchResolver,
+    RecommendationResolver,
   ],
   exports: [
     CatalogService,
@@ -106,12 +128,15 @@ import {
     ElasticsearchService,
     CatalogSearchService,
     CatalogReindexService,
+    RecommendationService,
+    UserInteractionService,
     CatalogItemRepository,
     BrandPartnerRepository,
     CollectionRepository,
     CollectionItemRepository,
     UserFavoriteRepository,
     CatalogFlexibleRepository,
+    CatalogGateway,
   ],
 })
 export class CatalogModule {}

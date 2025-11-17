@@ -1,0 +1,280 @@
+# Catalog GraphQL Schema
+
+scalar JSON
+scalar DateTime
+
+# Enums
+enum CatalogItemType {
+  SILHOUETTE
+  FABRIC
+  PATTERN
+  ELEMENT
+}
+
+enum RecommendationType {
+  PERSONALIZED
+  TRENDING
+  SIMILAR
+  COMPLEMENTARY
+  POPULAR
+  NEW_ARRIVALS
+}
+
+enum SortField {
+  RELEVANCE
+  POPULARITY
+  NEWEST
+  NAME
+}
+
+enum SortOrder {
+  ASC
+  DESC
+}
+
+# Types
+type CatalogItem {
+  id: ID!
+  type: CatalogItemType!
+  name: String!
+  description: String
+  category: String
+  subcategory: String
+  tags: [String!]
+  modelUrl: String
+  thumbnailUrl: String
+  previewImages: [String!]
+  properties: JSON
+  designerName: String
+  brandPartnerId: String
+  isExclusive: Boolean!
+  releaseDate: DateTime
+  isActive: Boolean!
+  isFeatured: Boolean!
+  requiredTier: String
+  popularityScore: Float!
+  viewCount: Int!
+  useCount: Int!
+  favoriteCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type PaginationInfo {
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+  hasNext: Boolean!
+  hasPrev: Boolean!
+}
+
+type PaginatedCatalogItems {
+  items: [CatalogItem!]!
+  pagination: PaginationInfo!
+}
+
+type SearchFacet {
+  value: String!
+  count: Int!
+}
+
+type PriceRangeStats {
+  min: Float!
+  max: Float!
+  avg: Float!
+}
+
+type SearchFacets {
+  categories: [SearchFacet!]!
+  colors: [SearchFacet!]!
+  occasions: [SearchFacet!]!
+  seasons: [SearchFacet!]!
+  brands: [SearchFacet!]!
+  styles: [SearchFacet!]!
+  priceRange: PriceRangeStats
+}
+
+type SearchResponse {
+  items: [CatalogItem!]!
+  pagination: PaginationInfo!
+  facets: SearchFacets
+  suggestions: [String!]
+  took: Int!
+}
+
+type RecommendationItem {
+  item: CatalogItem!
+  score: Float!
+  reason: String!
+  algorithm: String!
+}
+
+type RecommendationResponse {
+  items: [RecommendationItem!]!
+  type: RecommendationType!
+  took: Int!
+  total: Int
+}
+
+type Collection {
+  id: ID!
+  name: String!
+  description: String
+  imageUrl: String
+  isPublic: Boolean!
+  isFeatured: Boolean!
+  itemCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type PaginatedCollections {
+  items: [Collection!]!
+  pagination: PaginationInfo!
+}
+
+type BrandPartner {
+  id: ID!
+  name: String!
+  description: String
+  logoUrl: String
+  websiteUrl: String
+  partnershipType: String!
+  isActive: Boolean!
+  createdAt: DateTime!
+}
+
+type PaginatedBrandPartners {
+  items: [BrandPartner!]!
+  pagination: PaginationInfo!
+}
+
+type DeleteResult {
+  success: Boolean!
+  id: ID!
+}
+
+# Inputs
+input CatalogFilterInput {
+  page: Int
+  limit: Int
+  type: CatalogItemType
+  category: [String!]
+  tags: [String!]
+  isFeatured: Boolean
+  isActive: Boolean
+  brandPartnerId: String
+  sortBy: SortField
+  sortOrder: SortOrder
+  query: String
+}
+
+input SearchRequestInput {
+  query: String
+  page: Int
+  limit: Int
+  category: [String!]
+  tags: [String!]
+  colors: [String!]
+  occasions: [String!]
+  seasons: [String!]
+  styles: [String!]
+  priceRange: PriceRangeInput
+  brandPartner: String
+  type: CatalogItemType
+  isFeatured: Boolean
+  isActive: Boolean
+  sortBy: SortField
+  sortOrder: SortOrder
+  includeFacets: Boolean
+}
+
+input PriceRangeInput {
+  min: Float
+  max: Float
+}
+
+input RecommendationRequestInput {
+  type: RecommendationType!
+  userId: ID
+  itemId: ID
+  limit: Int
+  category: [String!]
+  includeDiversity: Boolean
+}
+
+input CreateCatalogItemInput {
+  type: CatalogItemType!
+  name: String!
+  description: String
+  category: String
+  subcategory: String
+  tags: [String!]
+  properties: JSON
+  designerName: String
+  brandPartnerId: ID
+  isExclusive: Boolean
+  releaseDate: DateTime
+  isFeatured: Boolean
+}
+
+input UpdateCatalogItemInput {
+  name: String
+  description: String
+  category: String
+  subcategory: String
+  tags: [String!]
+  properties: JSON
+  designerName: String
+  brandPartnerId: ID
+  isExclusive: Boolean
+  releaseDate: DateTime
+  isActive: Boolean
+  isFeatured: Boolean
+}
+
+# Queries
+type Query {
+  # Catalog Items
+  catalogItem(id: ID!): CatalogItem
+  catalogItems(filters: CatalogFilterInput): PaginatedCatalogItems!
+  catalogItemsByType(type: CatalogItemType!, page: Int, limit: Int): PaginatedCatalogItems!
+
+  # Search
+  searchCatalog(request: SearchRequestInput!): SearchResponse!
+  catalogSuggestions(prefix: String!, limit: Int): [String!]!
+
+  # Collections
+  collection(id: ID!): Collection
+  collections(page: Int, limit: Int): PaginatedCollections!
+  featuredCollections: [Collection!]!
+
+  # Brand Partners
+  brandPartner(id: ID!): BrandPartner
+  brandPartners(page: Int, limit: Int): PaginatedBrandPartners!
+
+  # Recommendations
+  recommendations(request: RecommendationRequestInput!): RecommendationResponse!
+  personalizedRecommendations(userId: ID!, limit: Int): RecommendationResponse!
+  trendingItems(limit: Int, category: String): RecommendationResponse!
+  similarItems(itemId: ID!, limit: Int): RecommendationResponse!
+  complementaryItems(itemId: ID!, limit: Int): RecommendationResponse!
+  popularItems(limit: Int, category: String): RecommendationResponse!
+  newArrivals(limit: Int, category: String): RecommendationResponse!
+}
+
+# Mutations
+type Mutation {
+  createCatalogItem(input: CreateCatalogItemInput!): CatalogItem!
+  updateCatalogItem(id: ID!, input: UpdateCatalogItemInput!): CatalogItem!
+  deleteCatalogItem(id: ID!): DeleteResult!
+}
+
+# Subscriptions
+type Subscription {
+  catalogItemCreated: CatalogItem!
+  catalogItemUpdated: CatalogItem!
+  catalogItemDeleted: DeleteResult!
+  recommendationsUpdated(userId: ID!): [RecommendationItem!]!
+}

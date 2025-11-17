@@ -79,7 +79,7 @@ export class RecommendationRequestDto {
   })
   @IsOptional()
   @IsString()
-  type?: string;
+  itemType?: string;
 
   @ApiPropertyOptional({
     description: 'Include diversity in results',
@@ -96,7 +96,6 @@ export class RecommendationRequestDto {
 export class RecommendationItemDto {
   @ApiProperty({
     description: 'Catalog item',
-    type: 'object',
   })
   item: any;
 
@@ -176,7 +175,6 @@ export class UserInteractionDto {
 
   @ApiPropertyOptional({
     description: 'Additional context',
-    type: 'object',
   })
   @IsOptional()
   context?: Record<string, any>;
