@@ -70,7 +70,7 @@ export class ElasticsearchService implements OnModuleInit {
 
       await this.client.indices.create({
         index: this.indexName,
-        body: catalogIndexMapping,
+        ...catalogIndexMapping as any,
       });
 
       this.logger.log(`Successfully created index: ${this.indexName}`);
@@ -251,10 +251,12 @@ export class ElasticsearchService implements OnModuleInit {
             },
           },
         },
-      });
+      } as any);
 
       const suggestions = response.suggest?.catalog_suggestions?.[0]?.options || [];
-      return suggestions.map((option: any) => option.text);
+      return Array.isArray(suggestions)
+        ? suggestions.map((option: any) => option.text)
+        : [];
     } catch (error) {
       this.logger.error(`Suggest failed: ${error.message}`, error.stack);
       return [];

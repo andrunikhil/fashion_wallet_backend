@@ -158,7 +158,6 @@ describe('SearchController', () => {
       const searchRequest: SearchRequestDto = {
         query: 'test',
         sortBy: SortField.POPULARITY,
-        sortOrder: 'desc',
       };
 
       await controller.search(searchRequest);
@@ -166,7 +165,6 @@ describe('SearchController', () => {
       expect(catalogSearchService.search).toHaveBeenCalledWith(
         expect.objectContaining({
           sortBy: SortField.POPULARITY,
-          sortOrder: 'desc',
         })
       );
     });

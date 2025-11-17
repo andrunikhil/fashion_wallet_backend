@@ -432,7 +432,7 @@ export class CatalogManagementService {
         popularity_score: item.popularityScore || 0,
         created_at: item.createdAt,
         updated_at: item.updatedAt,
-        price_range: item.priceRange || null,
+        price_range: item.properties?.priceRange || null,
       };
 
       await this.elasticsearchService.indexDocument(item.id, document);

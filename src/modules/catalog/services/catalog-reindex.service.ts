@@ -80,7 +80,7 @@ export class CatalogReindexService {
             popularity_score: item.popularityScore || 0,
             created_at: item.createdAt,
             updated_at: item.updatedAt,
-            price_range: item.priceRange || null,
+            price_range: item.properties?.priceRange || null,
           },
         }));
 
@@ -123,7 +123,7 @@ export class CatalogReindexService {
    * @param batchSize Number of items to process in each batch
    */
   async reindexByType(
-    type: string,
+    type: 'silhouette' | 'fabric' | 'pattern' | 'element',
     batchSize: number = 100
   ): Promise<{
     success: number;
@@ -184,7 +184,7 @@ export class CatalogReindexService {
             popularity_score: item.popularityScore || 0,
             created_at: item.createdAt,
             updated_at: item.updatedAt,
-            price_range: item.priceRange || null,
+            price_range: item.properties?.priceRange || null,
           },
         }));
 
