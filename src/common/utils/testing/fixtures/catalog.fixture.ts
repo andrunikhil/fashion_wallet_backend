@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { DataSource } from 'typeorm';
-import { CatalogItem } from '@/infrastructure/database/entities/catalog-item.entity';
+import { CatalogItem } from '@catalog/entities/catalog-item.entity';
 
 /**
  * Catalog fixture factory for generating test catalog items
@@ -48,15 +48,21 @@ export class CatalogFixture {
     item.description = overrides.description || `Description for test item ${this.sequenceId}`;
     item.type = overrides.type || 'silhouette';
     item.category = overrides.category || 'top';
+    item.tags = overrides.tags || [];
     item.properties = overrides.properties || {};
-    item.assetUrl = overrides.assetUrl || null;
-    item.thumbnailUrl = overrides.thumbnailUrl || null;
-    item.isPremium = overrides.isPremium ?? false;
+    item.modelUrl = overrides.modelUrl || undefined;
+    item.thumbnailUrl = overrides.thumbnailUrl || undefined;
+    item.previewImages = overrides.previewImages || [];
     item.isActive = overrides.isActive ?? true;
-    item.price = overrides.price ?? 0;
+    item.isFeatured = overrides.isFeatured ?? false;
+    item.isExclusive = overrides.isExclusive ?? false;
+    item.popularityScore = overrides.popularityScore ?? 0;
+    item.viewCount = overrides.viewCount ?? 0;
+    item.useCount = overrides.useCount ?? 0;
+    item.favoriteCount = overrides.favoriteCount ?? 0;
     item.createdAt = overrides.createdAt || new Date();
     item.updatedAt = overrides.updatedAt || new Date();
-    item.deletedAt = overrides.deletedAt || null;
+    item.deletedAt = overrides.deletedAt || undefined;
 
     return item;
   }
@@ -111,12 +117,9 @@ export class CatalogFixture {
    */
   buildPremium(overrides: Partial<CatalogItem> = {}): CatalogItem {
     return this.build({
-      isPremium: true,
-      price: 1000,
-      properties: {
-        tags: ['premium', 'designer'],
-        ...overrides.properties
-      },
+      isFeatured: true,
+      requiredTier: 'premium',
+      tags: ['premium', 'designer'],
       ...overrides
     });
   }
