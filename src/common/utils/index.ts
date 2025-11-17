@@ -1,14 +1,30 @@
 /**
  * Common utilities barrel export
  *
- * This module provides reusable utilities for the Fashion Wallet backend:
+ * This module provides comprehensive reusable utilities for the Fashion Wallet backend:
  * - Validation: Input validation, sanitization, and type guards
  * - Error Handling: Custom error classes and error formatting
  * - Logging: Structured logging with Winston
+ * - Security: Encryption, hashing, and token generation
+ * - Async: Retry logic, timeouts, parallel execution, and batch processing
+ * - String: Slugification, case conversion, masking, and templating
+ * - Date/Time: Formatting, parsing, timezone handling, and date arithmetic
+ * - Object/Array: Deep cloning, merging, grouping, and sorting
+ * - File: MIME type detection, validation, and path operations
  *
  * Usage:
  * ```typescript
- * import { ValidationUtil, Logger, AppError } from '@/common/utils';
+ * import {
+ *   ValidationUtil,
+ *   Logger,
+ *   AppError,
+ *   EncryptionUtil,
+ *   AsyncUtil,
+ *   StringUtil,
+ *   DateUtil,
+ *   ObjectUtil,
+ *   FileUtil
+ * } from '@/common/utils';
  * ```
  */
 
@@ -21,10 +37,20 @@ export * from './error';
 // Logging utilities
 export * from './logging';
 
-// Note: Additional utility modules will be added in future phases:
-// - Security utilities (encryption, hashing, tokens)
-// - Async utilities (retry, timeout, batch processing)
-// - String utilities (slugify, truncate, case conversion)
-// - Date utilities (formatting, parsing, timezone)
-// - Object/Array utilities (deep clone, merge, group)
-// - File utilities (validation, MIME detection)
+// Security utilities
+export * from './security';
+
+// Async utilities
+export * from './async';
+
+// String utilities
+export * from './string';
+
+// Date/Time utilities
+export * from './datetime';
+
+// Object and Array utilities
+export * from './object';
+
+// File utilities
+export * from './file';
