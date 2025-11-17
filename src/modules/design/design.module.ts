@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
+import { BullModule } from '@nestjs/bull';
 import Redis from 'ioredis';
 
 // Entities
@@ -41,6 +42,8 @@ import { VersionControlService } from './services/version-control.service';
 import { AutoSaveService } from './services/auto-save.service';
 import { ExportService } from './services/export.service';
 import { DesignCacheService } from './services/cache.service';
+import { CollaborationService } from './services/collaboration.service';
+import { RenderingService } from './services/rendering.service';
 
 // Controllers
 import { DesignController } from './controllers/design.controller';
@@ -48,6 +51,12 @@ import { LayerController } from './controllers/layer.controller';
 import { ExportController } from './controllers/export.controller';
 import { VersionController } from './controllers/version.controller';
 import { CanvasSettingsController } from './controllers/canvas-settings.controller';
+
+// Gateways
+import { DesignGateway } from './gateways/design.gateway';
+
+// Workers
+import { RenderWorker } from './workers/render.worker';
 
 @Module({
   imports: [
@@ -68,6 +77,11 @@ import { CanvasSettingsController } from './controllers/canvas-settings.controll
       { name: DesignAutosave.name, schema: DesignAutosaveSchema },
       { name: RenderCache.name, schema: RenderCacheSchema },
     ]),
+
+    // BullMQ Queue for rendering
+    BullModule.registerQueue({
+      name: 'render',
+    }),
   ],
 
   controllers: [
@@ -86,6 +100,14 @@ import { CanvasSettingsController } from './controllers/canvas-settings.controll
     AutoSaveService,
     ExportService,
     DesignCacheService,
+    CollaborationService,
+    RenderingService,
+
+    // Gateways
+    DesignGateway,
+
+    // Workers
+    RenderWorker,
 
     // Repositories
     DesignRepository,

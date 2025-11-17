@@ -22,6 +22,9 @@ export * from './repositories/mongo.repository';
 // Entities
 export * from './entities/user.entity';
 export * from './entities/avatar.entity';
+export * from './entities/measurement.entity';
+export * from './entities/photo.entity';
+export * from './entities/processing-job.entity';
 export * from './entities/catalog-item.entity';
 export * from './entities/audit-log.entity';
 

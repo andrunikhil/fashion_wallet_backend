@@ -34,12 +34,16 @@ import {
 import { CatalogController } from './controllers/catalog.controller';
 import { CollectionController } from './controllers/collection.controller';
 import { BrandPartnerController } from './controllers/brand-partner.controller';
+import { SearchController } from './controllers/search.controller';
 
 // Services
 import { CatalogService } from './services/catalog.service';
 import { CatalogManagementService } from './services/catalog-management.service';
 import { CollectionService } from './services/collection.service';
 import { BrandPartnerService } from './services/brand-partner.service';
+import { ElasticsearchService } from './services/elasticsearch.service';
+import { CatalogSearchService } from './services/catalog-search.service';
+import { CatalogReindexService } from './services/catalog-reindex.service';
 
 // Configurations
 import {
@@ -77,12 +81,16 @@ import {
     CatalogController,
     CollectionController,
     BrandPartnerController,
+    SearchController,
   ],
   providers: [
     CatalogService,
     CatalogManagementService,
     CollectionService,
     BrandPartnerService,
+    ElasticsearchService,
+    CatalogSearchService,
+    CatalogReindexService,
     CatalogItemRepository,
     BrandPartnerRepository,
     CollectionRepository,
@@ -95,6 +103,9 @@ import {
     CatalogManagementService,
     CollectionService,
     BrandPartnerService,
+    ElasticsearchService,
+    CatalogSearchService,
+    CatalogReindexService,
     CatalogItemRepository,
     BrandPartnerRepository,
     CollectionRepository,

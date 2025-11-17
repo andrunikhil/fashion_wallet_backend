@@ -23,6 +23,7 @@ import {
   BrandPartnerRepository,
 } from '../repositories';
 import { IPaginatedResult } from '../interfaces';
+import { ElasticsearchService } from './elasticsearch.service';
 
 @Injectable()
 export class CatalogManagementService {
@@ -36,6 +37,7 @@ export class CatalogManagementService {
     private readonly catalogItemRepository: CatalogItemRepository,
     private readonly catalogFlexibleRepository: CatalogFlexibleRepository,
     private readonly brandPartnerRepository: BrandPartnerRepository,
+    private readonly elasticsearchService: ElasticsearchService,
   ) {}
 
   /**
@@ -90,10 +92,10 @@ export class CatalogManagementService {
         this.logger.error('Failed to clear cache', err.stack)
       );
 
-      // TODO: Index in Elasticsearch (Phase 3)
-      // this.indexCatalogItem(savedItem).catch(err =>
-      //   this.logger.error('Failed to index catalog item', err.stack)
-      // );
+      // 6. Index in Elasticsearch (Phase 3)
+      this.indexCatalogItem(savedItem).catch(err =>
+        this.logger.error('Failed to index catalog item', err.stack)
+      );
 
       this.logger.log(`Successfully created catalog item: ${savedItem.id}`);
       return savedItem;
@@ -187,10 +189,10 @@ export class CatalogManagementService {
         this.logger.error('Failed to clear cache', err.stack)
       );
 
-      // TODO: Re-index in Elasticsearch (Phase 3)
-      // this.indexCatalogItem(updated).catch(err =>
-      //   this.logger.error('Failed to re-index catalog item', err.stack)
-      // );
+      // 7. Re-index in Elasticsearch (Phase 3)
+      this.indexCatalogItem(updated).catch(err =>
+        this.logger.error('Failed to re-index catalog item', err.stack)
+      );
 
       this.logger.log(`Successfully updated catalog item: ${id}`);
       return updated;
@@ -221,10 +223,10 @@ export class CatalogManagementService {
       this.logger.error('Failed to clear cache', err.stack)
     );
 
-    // TODO: Remove from Elasticsearch (Phase 3)
-    // this.deleteFromElasticsearch(id).catch(err =>
-    //   this.logger.error('Failed to delete from Elasticsearch', err.stack)
-    // );
+    // 4. Remove from Elasticsearch (Phase 3)
+    this.deleteFromElasticsearch(id).catch(err =>
+      this.logger.error('Failed to delete from Elasticsearch', err.stack)
+    );
 
     this.logger.log(`Successfully deleted catalog item: ${id}`);
   }
@@ -405,5 +407,58 @@ export class CatalogManagementService {
    */
   private deleteFromCache(key: string): void {
     this.cache.delete(key);
+  }
+
+  /**
+   * Index a catalog item in Elasticsearch
+   */
+  private async indexCatalogItem(item: CatalogItem): Promise<void> {
+    try {
+      const document = {
+        id: item.id,
+        type: item.type,
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        subcategory: item.subcategory,
+        tags: item.tags || [],
+        colors: item.properties?.colors || [],
+        occasions: item.properties?.occasions || [],
+        seasons: item.properties?.seasons || [],
+        styles: item.properties?.styles || [],
+        brand_partner: item.brandPartnerId || null,
+        is_active: item.isActive,
+        is_featured: item.isFeatured,
+        popularity_score: item.popularityScore || 0,
+        created_at: item.createdAt,
+        updated_at: item.updatedAt,
+        price_range: item.priceRange || null,
+      };
+
+      await this.elasticsearchService.indexDocument(item.id, document);
+      this.logger.debug(`Indexed catalog item in Elasticsearch: ${item.id}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to index catalog item ${item.id} in Elasticsearch: ${error.message}`,
+        error.stack
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a catalog item from Elasticsearch
+   */
+  private async deleteFromElasticsearch(id: string): Promise<void> {
+    try {
+      await this.elasticsearchService.deleteDocument(id);
+      this.logger.debug(`Deleted catalog item from Elasticsearch: ${id}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete catalog item ${id} from Elasticsearch: ${error.message}`,
+        error.stack
+      );
+      throw error;
+    }
   }
 }

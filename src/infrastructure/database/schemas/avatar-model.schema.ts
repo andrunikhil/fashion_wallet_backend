@@ -247,7 +247,7 @@ export class AvatarModel {
   @Prop({ type: Object })
   metadata: {
     format: string;
-    coordinate System: string;
+    coordinateSystem: string;
     units: string;
     [key: string]: any;
   };

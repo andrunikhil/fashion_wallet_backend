@@ -43,9 +43,11 @@ import { AvatarGateway } from './gateways/avatar.gateway';
 // Subscribers
 import { AvatarEventSubscriber } from './subscribers/avatar-event.subscriber';
 
-// Entities (these should be defined in your database entities folder)
-// import { Avatar } from '../../infrastructure/database/entities/avatar.entity';
-// For now, commenting out until entities are properly set up
+// Entities
+import { Avatar } from '../../infrastructure/database/entities/avatar.entity';
+import { Measurement } from '../../infrastructure/database/entities/measurement.entity';
+import { Photo } from '../../infrastructure/database/entities/photo.entity';
+import { ProcessingJob } from '../../infrastructure/database/entities/processing-job.entity';
 
 @Module({
   imports: [
@@ -60,7 +62,7 @@ import { AvatarEventSubscriber } from './subscribers/avatar-event.subscriber';
       ttl: 3600, // 1 hour default TTL
       max: 1000, // max items in cache
     }),
-    // TypeOrmModule.forFeature([Avatar, Photo, Measurement, ProcessingJob]),
+    TypeOrmModule.forFeature([Avatar, Photo, Measurement, ProcessingJob]),
     // MongooseModule.forFeature([{ name: AvatarModel.name, schema: AvatarModelSchema }]),
   ],
   controllers: [
