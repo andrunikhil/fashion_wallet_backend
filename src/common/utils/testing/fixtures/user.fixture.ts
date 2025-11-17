@@ -1,21 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { FixtureFactory } from './fixture.interface';
 import { DataSource } from 'typeorm';
-
-/**
- * User entity interface (to be replaced with actual User entity when available)
- */
-export interface User {
-  id?: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  password: string;
-  role?: string;
-  isActive?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import { User } from '@/infrastructure/database/entities/user.entity';
 
 /**
  * User fixture factory for generating test users
@@ -57,18 +43,24 @@ export class UserFixture implements FixtureFactory<User> {
    */
   build(overrides: Partial<User> = {}): User {
     this.sequenceId++;
-    return {
-      id: overrides.id || uuidv4(),
-      email: overrides.email || `user${this.sequenceId}@test.com`,
-      firstName: overrides.firstName || `Test`,
-      lastName: overrides.lastName || `User${this.sequenceId}`,
-      password: overrides.password || 'Test@1234',
-      role: overrides.role || 'user',
-      isActive: overrides.isActive ?? true,
-      createdAt: overrides.createdAt || new Date(),
-      updatedAt: overrides.updatedAt || new Date(),
-      ...overrides
-    };
+
+    const user = new User();
+    user.id = overrides.id || uuidv4();
+    user.email = overrides.email || `user${this.sequenceId}@test.com`;
+    user.firstName = overrides.firstName || `Test`;
+    user.lastName = overrides.lastName || `User${this.sequenceId}`;
+    // Default bcrypt hash for password "Test@1234"
+    user.passwordHash = overrides.passwordHash || '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW';
+    user.role = overrides.role || 'user';
+    user.isActive = overrides.isActive ?? true;
+    user.emailVerified = overrides.emailVerified ?? false;
+    user.createdAt = overrides.createdAt || new Date();
+    user.updatedAt = overrides.updatedAt || new Date();
+    user.deletedAt = overrides.deletedAt || null;
+    user.createdBy = overrides.createdBy || null;
+    user.updatedBy = overrides.updatedBy || null;
+
+    return user;
   }
 
   /**
@@ -87,7 +79,7 @@ export class UserFixture implements FixtureFactory<User> {
     }
 
     const user = this.build(overrides);
-    const repository = this.dataSource.getRepository('User');
+    const repository = this.dataSource.getRepository(User);
     return await repository.save(user);
   }
 
@@ -100,7 +92,7 @@ export class UserFixture implements FixtureFactory<User> {
     }
 
     const users = this.buildMany(count, overrides);
-    const repository = this.dataSource.getRepository('User');
+    const repository = this.dataSource.getRepository(User);
     return await repository.save(users);
   }
 
@@ -117,6 +109,7 @@ export class UserFixture implements FixtureFactory<User> {
   buildAdmin(overrides: Partial<User> = {}): User {
     return this.build({
       role: 'admin',
+      emailVerified: true,
       ...overrides
     });
   }
@@ -127,6 +120,29 @@ export class UserFixture implements FixtureFactory<User> {
   async createAdmin(overrides: Partial<User> = {}): Promise<User> {
     return this.create({
       role: 'admin',
+      emailVerified: true,
+      ...overrides
+    });
+  }
+
+  /**
+   * Build a designer user
+   */
+  buildDesigner(overrides: Partial<User> = {}): User {
+    return this.build({
+      role: 'designer',
+      emailVerified: true,
+      ...overrides
+    });
+  }
+
+  /**
+   * Create and persist a designer user
+   */
+  async createDesigner(overrides: Partial<User> = {}): Promise<User> {
+    return this.create({
+      role: 'designer',
+      emailVerified: true,
       ...overrides
     });
   }

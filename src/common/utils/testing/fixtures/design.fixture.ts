@@ -1,53 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
-import { FixtureFactory } from './fixture.interface';
-import { DataSource } from 'typeorm';
-
-/**
- * Design layer interface
- */
-export interface DesignLayer {
-  id?: string;
-  designId: string;
-  type: 'silhouette' | 'fabric' | 'pattern' | 'accessory';
-  order: number;
-  data: {
-    itemId: string;
-    transform?: {
-      position: { x: number; y: number; z: number };
-      rotation: { x: number; y: number; z: number };
-      scale: { x: number; y: number; z: number };
-    };
-    properties?: Record<string, any>;
-  };
-  isVisible?: boolean;
-  isLocked?: boolean;
-}
-
-/**
- * Design entity interface (to be replaced with actual Design entity when available)
- */
-export interface Design {
-  id?: string;
-  userId: string;
-  name: string;
-  description?: string;
-  avatarId: string;
-  layers?: DesignLayer[];
-  status?: 'draft' | 'published' | 'archived';
-  visibility?: 'private' | 'public' | 'unlisted';
-  metadata?: Record<string, any>;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import { Model } from 'mongoose';
+import { Design, DesignDocument } from '@/infrastructure/database/schemas/design.schema';
 
 /**
  * Design fixture factory for generating test designs
  *
  * Provides methods to create design test data with layers and configurations
+ * Note: Design uses MongoDB/Mongoose, not TypeORM
  *
  * @example
  * ```typescript
- * const designFixture = new DesignFixture();
+ * const designFixture = new DesignFixture(designModel);
  *
  * // Build design without layers
  * const design = designFixture.build({ name: 'Summer Outfit' });
@@ -59,38 +22,36 @@ export interface Design {
  * const savedDesign = await designFixture.create({ status: 'published' });
  * ```
  */
-export class DesignFixture implements FixtureFactory<Design> {
+export class DesignFixture {
   private sequenceId = 0;
-  private dataSource?: DataSource;
+  private model?: Model<DesignDocument>;
 
-  constructor(dataSource?: DataSource) {
-    this.dataSource = dataSource;
+  constructor(model?: Model<DesignDocument>) {
+    this.model = model;
   }
 
   /**
-   * Set the data source for database operations
+   * Set the Mongoose model for database operations
    */
-  setDataSource(dataSource: DataSource): void {
-    this.dataSource = dataSource;
+  setModel(model: Model<DesignDocument>): void {
+    this.model = model;
   }
 
   /**
    * Build a design instance without persisting to database
    */
-  build(overrides: Partial<Design> = {}): Design {
+  build(overrides: Partial<Design> = {}): Partial<Design> {
     this.sequenceId++;
+
     return {
-      id: overrides.id || uuidv4(),
       userId: overrides.userId || uuidv4(),
       name: overrides.name || `Design ${this.sequenceId}`,
-      description: overrides.description || `Test design description ${this.sequenceId}`,
-      avatarId: overrides.avatarId || uuidv4(),
-      layers: overrides.layers || [],
       status: overrides.status || 'draft',
-      visibility: overrides.visibility || 'private',
+      layers: overrides.layers || [],
       metadata: overrides.metadata || {},
-      createdAt: overrides.createdAt || new Date(),
-      updatedAt: overrides.updatedAt || new Date(),
+      avatarId: overrides.avatarId,
+      catalogItemIds: overrides.catalogItemIds || [],
+      version: overrides.version || 1,
       ...overrides
     };
   }
@@ -100,67 +61,64 @@ export class DesignFixture implements FixtureFactory<Design> {
    * @param layerCount Number of layers to create (default: 3)
    * @param overrides Design overrides
    */
-  buildWithLayers(layerCount: number = 3, overrides: Partial<Design> = {}): Design {
+  buildWithLayers(layerCount: number = 3, overrides: Partial<Design> = {}): Partial<Design> {
     const design = this.build(overrides);
     design.layers = Array.from({ length: layerCount }, (_, index) => ({
       id: uuidv4(),
-      designId: design.id!,
       type: this.getLayerType(index),
-      order: index,
-      data: {
-        itemId: uuidv4(),
-        transform: {
-          position: { x: 0, y: 0, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 }
-        },
-        properties: {}
-      },
-      isVisible: true,
-      isLocked: false
+      itemId: uuidv4(),
+      position: { x: 0, y: 0, z: index },
+      rotation: 0,
+      scale: { x: 1, y: 1 },
+      visible: true
     }));
+
+    // Extract catalog item IDs from layers
+    design.catalogItemIds = design.layers
+      .filter(layer => layer.itemId)
+      .map(layer => layer.itemId!);
+
     return design;
   }
 
   /**
    * Get layer type based on index
    */
-  private getLayerType(index: number): DesignLayer['type'] {
-    const types: DesignLayer['type'][] = ['silhouette', 'fabric', 'pattern', 'accessory'];
+  private getLayerType(index: number): string {
+    const types = ['silhouette', 'fabric', 'pattern'];
     return types[index % types.length];
   }
 
   /**
    * Build multiple design instances without persisting
    */
-  buildMany(count: number, overrides: Partial<Design> = {}): Design[] {
+  buildMany(count: number, overrides: Partial<Design> = {}): Partial<Design>[] {
     return Array.from({ length: count }, () => this.build(overrides));
   }
 
   /**
    * Create and persist a design to database
    */
-  async create(overrides: Partial<Design> = {}): Promise<Design> {
-    if (!this.dataSource) {
-      throw new Error('DataSource not set. Call setDataSource() first or pass it to constructor.');
+  async create(overrides: Partial<Design> = {}): Promise<DesignDocument> {
+    if (!this.model) {
+      throw new Error('Model not set. Call setModel() first or pass it to constructor.');
     }
 
     const design = this.build(overrides);
-    const repository = this.dataSource.getRepository('Design');
-    return await repository.save(design);
+    const doc = new this.model(design);
+    return await doc.save();
   }
 
   /**
    * Create and persist multiple designs to database
    */
-  async createMany(count: number, overrides: Partial<Design> = {}): Promise<Design[]> {
-    if (!this.dataSource) {
-      throw new Error('DataSource not set. Call setDataSource() first or pass it to constructor.');
+  async createMany(count: number, overrides: Partial<Design> = {}): Promise<DesignDocument[]> {
+    if (!this.model) {
+      throw new Error('Model not set. Call setModel() first or pass it to constructor.');
     }
 
     const designs = this.buildMany(count, overrides);
-    const repository = this.dataSource.getRepository('Design');
-    return await repository.save(designs);
+    return await this.model.insertMany(designs);
   }
 
   /**
@@ -173,10 +131,9 @@ export class DesignFixture implements FixtureFactory<Design> {
   /**
    * Build a published design
    */
-  buildPublished(overrides: Partial<Design> = {}): Design {
+  buildPublished(overrides: Partial<Design> = {}): Partial<Design> {
     return this.build({
       status: 'published',
-      visibility: 'public',
       ...overrides
     });
   }
@@ -184,10 +141,19 @@ export class DesignFixture implements FixtureFactory<Design> {
   /**
    * Build a draft design
    */
-  buildDraft(overrides: Partial<Design> = {}): Design {
+  buildDraft(overrides: Partial<Design> = {}): Partial<Design> {
     return this.build({
       status: 'draft',
-      visibility: 'private',
+      ...overrides
+    });
+  }
+
+  /**
+   * Build an archived design
+   */
+  buildArchived(overrides: Partial<Design> = {}): Partial<Design> {
+    return this.build({
+      status: 'archived',
       ...overrides
     });
   }
@@ -195,10 +161,9 @@ export class DesignFixture implements FixtureFactory<Design> {
   /**
    * Create a published design
    */
-  async createPublished(overrides: Partial<Design> = {}): Promise<Design> {
+  async createPublished(overrides: Partial<Design> = {}): Promise<DesignDocument> {
     return this.create({
       status: 'published',
-      visibility: 'public',
       ...overrides
     });
   }
@@ -206,10 +171,9 @@ export class DesignFixture implements FixtureFactory<Design> {
   /**
    * Create a draft design
    */
-  async createDraft(overrides: Partial<Design> = {}): Promise<Design> {
+  async createDraft(overrides: Partial<Design> = {}): Promise<DesignDocument> {
     return this.create({
       status: 'draft',
-      visibility: 'private',
       ...overrides
     });
   }

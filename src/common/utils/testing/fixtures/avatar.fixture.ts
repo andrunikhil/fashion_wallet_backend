@@ -1,41 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { FixtureFactory } from './fixture.interface';
 import { DataSource } from 'typeorm';
-
-/**
- * Avatar entity interface (to be replaced with actual Avatar entity when available)
- */
-export interface Avatar {
-  id?: string;
-  userId: string;
-  name: string;
-  status?: string;
-  modelUrl?: string;
-  thumbnailUrl?: string;
-  metadata?: Record<string, any>;
-  measurements?: AvatarMeasurements;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-/**
- * Avatar measurements interface
- */
-export interface AvatarMeasurements {
-  id?: string;
-  avatarId: string;
-  height: number;
-  shoulderWidth: number;
-  chestCircumference: number;
-  waistCircumference: number;
-  hipCircumference: number;
-  inseamLength: number;
-  armLength: number;
-  neckCircumference: number;
-  unit: 'metric' | 'imperial';
-  confidence?: number;
-  isManual?: boolean;
-}
+import { Avatar } from '@/infrastructure/database/entities/avatar.entity';
 
 /**
  * Avatar fixture factory for generating test avatars
@@ -47,11 +13,13 @@ export interface AvatarMeasurements {
  * ```typescript
  * const avatarFixture = new AvatarFixture();
  *
- * // Build avatar without measurements
+ * // Build avatar
  * const avatar = avatarFixture.build({ userId: 'user123' });
  *
- * // Build avatar with measurements
- * const avatarWithMeasurements = avatarFixture.buildWithMeasurements();
+ * // Build avatar with custom measurements
+ * const avatarWithMeasurements = avatarFixture.build({
+ *   measurements: { height: 180, chest: 100 }
+ * });
  *
  * // Create and save avatar to database
  * const savedAvatar = await avatarFixture.create({ name: 'My Avatar' });
@@ -77,47 +45,75 @@ export class AvatarFixture implements FixtureFactory<Avatar> {
    */
   build(overrides: Partial<Avatar> = {}): Avatar {
     this.sequenceId++;
-    return {
-      id: overrides.id || uuidv4(),
-      userId: overrides.userId || uuidv4(),
-      name: overrides.name || `Avatar ${this.sequenceId}`,
-      status: overrides.status || 'ready',
-      modelUrl: overrides.modelUrl ||
-        `https://cdn.example.com/avatars/${uuidv4()}.gltf`,
-      thumbnailUrl: overrides.thumbnailUrl ||
-        `https://cdn.example.com/thumbnails/${uuidv4()}.jpg`,
-      metadata: overrides.metadata || {
-        height: 175,
-        weight: 70,
-        bodyType: 'athletic'
-      },
-      createdAt: overrides.createdAt || new Date(),
-      updatedAt: overrides.updatedAt || new Date(),
-      ...overrides
+
+    const avatar = new Avatar();
+    avatar.id = overrides.id || uuidv4();
+    avatar.userId = overrides.userId || uuidv4();
+    avatar.name = overrides.name || `Avatar ${this.sequenceId}`;
+    avatar.gender = overrides.gender || 'unisex';
+    avatar.measurements = overrides.measurements || {
+      height: 170,
+      weight: 65,
+      chest: 90,
+      waist: 75,
+      hips: 95,
+      shoulderWidth: 40
     };
+    avatar.modelUrl = overrides.modelUrl || null;
+    avatar.thumbnailUrl = overrides.thumbnailUrl || null;
+    avatar.isDefault = overrides.isDefault ?? false;
+    avatar.createdAt = overrides.createdAt || new Date();
+    avatar.updatedAt = overrides.updatedAt || new Date();
+    avatar.deletedAt = overrides.deletedAt || null;
+
+    return avatar;
   }
 
   /**
-   * Build avatar with measurements
+   * Build male avatar
    */
-  buildWithMeasurements(overrides: Partial<Avatar> = {}): Avatar {
-    const avatar = this.build(overrides);
-    avatar.measurements = {
-      id: uuidv4(),
-      avatarId: avatar.id!,
-      height: 175,
-      shoulderWidth: 45,
-      chestCircumference: 95,
-      waistCircumference: 80,
-      hipCircumference: 98,
-      inseamLength: 80,
-      armLength: 65,
-      neckCircumference: 38,
-      unit: 'metric',
-      confidence: 0.92,
-      isManual: false
-    };
-    return avatar;
+  buildMale(overrides: Partial<Avatar> = {}): Avatar {
+    return this.build({
+      gender: 'male',
+      measurements: {
+        height: 180,
+        weight: 75,
+        chest: 100,
+        waist: 85,
+        hips: 95,
+        shoulderWidth: 45
+      },
+      ...overrides
+    });
+  }
+
+  /**
+   * Build female avatar
+   */
+  buildFemale(overrides: Partial<Avatar> = {}): Avatar {
+    return this.build({
+      gender: 'female',
+      measurements: {
+        height: 165,
+        weight: 60,
+        chest: 85,
+        waist: 68,
+        hips: 92,
+        shoulderWidth: 38
+      },
+      ...overrides
+    });
+  }
+
+  /**
+   * Build default avatar
+   */
+  buildDefault(overrides: Partial<Avatar> = {}): Avatar {
+    return this.build({
+      isDefault: true,
+      name: 'Default Avatar',
+      ...overrides
+    });
   }
 
   /**
@@ -136,7 +132,7 @@ export class AvatarFixture implements FixtureFactory<Avatar> {
     }
 
     const avatar = this.build(overrides);
-    const repository = this.dataSource.getRepository('Avatar');
+    const repository = this.dataSource.getRepository(Avatar);
     return await repository.save(avatar);
   }
 
@@ -149,7 +145,7 @@ export class AvatarFixture implements FixtureFactory<Avatar> {
     }
 
     const avatars = this.buildMany(count, overrides);
-    const repository = this.dataSource.getRepository('Avatar');
+    const repository = this.dataSource.getRepository(Avatar);
     return await repository.save(avatars);
   }
 
@@ -158,31 +154,5 @@ export class AvatarFixture implements FixtureFactory<Avatar> {
    */
   reset(): void {
     this.sequenceId = 0;
-  }
-
-  /**
-   * Build avatar in processing status
-   */
-  buildProcessing(overrides: Partial<Avatar> = {}): Avatar {
-    return this.build({
-      status: 'processing',
-      modelUrl: undefined,
-      thumbnailUrl: undefined,
-      ...overrides
-    });
-  }
-
-  /**
-   * Build avatar in failed status
-   */
-  buildFailed(overrides: Partial<Avatar> = {}): Avatar {
-    return this.build({
-      status: 'failed',
-      metadata: {
-        error: 'Processing failed',
-        ...overrides.metadata
-      },
-      ...overrides
-    });
   }
 }

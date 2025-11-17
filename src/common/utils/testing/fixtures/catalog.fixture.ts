@@ -1,57 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { DataSource } from 'typeorm';
-
-/**
- * Silhouette entity interface (to be replaced with actual Silhouette entity when available)
- */
-export interface Silhouette {
-  id?: string;
-  name: string;
-  category: string;
-  subcategory: string;
-  modelUrl: string;
-  thumbnailUrl: string;
-  fitType: string;
-  tags?: string[];
-  metadata?: Record<string, any>;
-  isActive?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-/**
- * Fabric entity interface (to be replaced with actual Fabric entity when available)
- */
-export interface Fabric {
-  id?: string;
-  name: string;
-  type: string;
-  diffuseMapUrl: string;
-  normalMapUrl?: string;
-  roughnessMapUrl?: string;
-  properties?: Record<string, any>;
-  colors?: string[];
-  tags?: string[];
-  isActive?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-/**
- * Pattern entity interface (to be replaced with actual Pattern entity when available)
- */
-export interface Pattern {
-  id?: string;
-  name: string;
-  type: string;
-  textureUrl: string;
-  thumbnailUrl: string;
-  colors?: string[];
-  tags?: string[];
-  isActive?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import { CatalogItem } from '@/infrastructure/database/entities/catalog-item.entity';
 
 /**
  * Catalog fixture factory for generating test catalog items
@@ -63,13 +12,13 @@ export interface Pattern {
  * const catalogFixture = new CatalogFixture();
  *
  * // Create silhouette
- * const tshirt = catalogFixture.createSilhouette({ name: 'T-Shirt' });
+ * const tshirt = catalogFixture.buildSilhouette({ name: 'T-Shirt' });
  *
  * // Create fabric
- * const cotton = catalogFixture.createFabric({ name: 'Cotton' });
+ * const cotton = catalogFixture.buildFabric({ name: 'Cotton' });
  *
  * // Create pattern
- * const stripes = catalogFixture.createPattern({ name: 'Stripes' });
+ * const stripes = catalogFixture.buildPattern({ name: 'Stripes' });
  * ```
  */
 export class CatalogFixture {
@@ -88,131 +37,181 @@ export class CatalogFixture {
   }
 
   /**
-   * Create a silhouette instance
+   * Build a catalog item
    */
-  createSilhouette(overrides: Partial<Silhouette> = {}): Silhouette {
+  build(overrides: Partial<CatalogItem> = {}): CatalogItem {
     this.sequenceId++;
-    return {
-      id: overrides.id || uuidv4(),
-      name: overrides.name || `Test Silhouette ${this.sequenceId}`,
-      category: overrides.category || 'tops',
-      subcategory: overrides.subcategory || 't-shirt',
-      modelUrl: overrides.modelUrl || `https://cdn.example.com/models/silhouette-${uuidv4()}.gltf`,
-      thumbnailUrl: overrides.thumbnailUrl || `https://cdn.example.com/thumbnails/silhouette-${uuidv4()}.jpg`,
-      fitType: overrides.fitType || 'regular',
-      tags: overrides.tags || ['casual', 'summer'],
-      metadata: overrides.metadata || {},
-      isActive: overrides.isActive ?? true,
-      createdAt: overrides.createdAt || new Date(),
-      updatedAt: overrides.updatedAt || new Date(),
-      ...overrides
-    };
+
+    const item = new CatalogItem();
+    item.id = overrides.id || uuidv4();
+    item.name = overrides.name || `Test Item ${this.sequenceId}`;
+    item.description = overrides.description || `Description for test item ${this.sequenceId}`;
+    item.type = overrides.type || 'silhouette';
+    item.category = overrides.category || 'top';
+    item.properties = overrides.properties || {};
+    item.assetUrl = overrides.assetUrl || null;
+    item.thumbnailUrl = overrides.thumbnailUrl || null;
+    item.isPremium = overrides.isPremium ?? false;
+    item.isActive = overrides.isActive ?? true;
+    item.price = overrides.price ?? 0;
+    item.createdAt = overrides.createdAt || new Date();
+    item.updatedAt = overrides.updatedAt || new Date();
+    item.deletedAt = overrides.deletedAt || null;
+
+    return item;
   }
 
   /**
-   * Create a fabric instance
+   * Build a silhouette catalog item
    */
-  createFabric(overrides: Partial<Fabric> = {}): Fabric {
-    this.sequenceId++;
-    return {
-      id: overrides.id || uuidv4(),
-      name: overrides.name || `Test Fabric ${this.sequenceId}`,
-      type: overrides.type || 'solid',
-      diffuseMapUrl: overrides.diffuseMapUrl || `https://cdn.example.com/fabrics/fabric-${uuidv4()}.jpg`,
-      normalMapUrl: overrides.normalMapUrl,
-      roughnessMapUrl: overrides.roughnessMapUrl,
-      properties: overrides.properties || {
-        shine: 0.2,
-        stretch: 0.1,
-        drape: 'medium'
+  buildSilhouette(overrides: Partial<CatalogItem> = {}): CatalogItem {
+    return this.build({
+      type: 'silhouette',
+      category: 'top',
+      properties: {
+        tags: ['casual', 'everyday'],
+        ...overrides.properties
       },
-      colors: overrides.colors || ['#FFFFFF', '#000000', '#FF0000'],
-      tags: overrides.tags || ['natural', 'breathable'],
-      isActive: overrides.isActive ?? true,
-      createdAt: overrides.createdAt || new Date(),
-      updatedAt: overrides.updatedAt || new Date(),
       ...overrides
-    };
+    });
   }
 
   /**
-   * Create a pattern instance
+   * Build a fabric catalog item
    */
-  createPattern(overrides: Partial<Pattern> = {}): Pattern {
-    this.sequenceId++;
-    return {
-      id: overrides.id || uuidv4(),
-      name: overrides.name || `Test Pattern ${this.sequenceId}`,
-      type: overrides.type || 'geometric',
-      textureUrl: overrides.textureUrl || `https://cdn.example.com/patterns/pattern-${uuidv4()}.jpg`,
-      thumbnailUrl: overrides.thumbnailUrl || `https://cdn.example.com/thumbnails/pattern-${uuidv4()}.jpg`,
-      colors: overrides.colors || ['#000000', '#FFFFFF'],
-      tags: overrides.tags || ['modern', 'classic'],
-      isActive: overrides.isActive ?? true,
-      createdAt: overrides.createdAt || new Date(),
-      updatedAt: overrides.updatedAt || new Date(),
+  buildFabric(overrides: Partial<CatalogItem> = {}): CatalogItem {
+    return this.build({
+      type: 'fabric',
+      properties: {
+        material: 'cotton',
+        tags: ['soft', 'breathable'],
+        ...overrides.properties
+      },
       ...overrides
-    };
+    });
   }
 
   /**
-   * Create multiple silhouettes
+   * Build a pattern catalog item
    */
-  createSilhouettes(count: number, overrides: Partial<Silhouette> = {}): Silhouette[] {
-    return Array.from({ length: count }, () => this.createSilhouette(overrides));
+  buildPattern(overrides: Partial<CatalogItem> = {}): CatalogItem {
+    return this.build({
+      type: 'pattern',
+      properties: {
+        patternType: 'geometric',
+        tags: ['modern', 'classic'],
+        ...overrides.properties
+      },
+      ...overrides
+    });
   }
 
   /**
-   * Create multiple fabrics
+   * Build premium catalog item
    */
-  createFabrics(count: number, overrides: Partial<Fabric> = {}): Fabric[] {
-    return Array.from({ length: count }, () => this.createFabric(overrides));
+  buildPremium(overrides: Partial<CatalogItem> = {}): CatalogItem {
+    return this.build({
+      isPremium: true,
+      price: 1000,
+      properties: {
+        tags: ['premium', 'designer'],
+        ...overrides.properties
+      },
+      ...overrides
+    });
   }
 
   /**
-   * Create multiple patterns
+   * Build multiple catalog items
    */
-  createPatterns(count: number, overrides: Partial<Pattern> = {}): Pattern[] {
-    return Array.from({ length: count }, () => this.createPattern(overrides));
+  buildMany(count: number, overrides: Partial<CatalogItem> = {}): CatalogItem[] {
+    return Array.from({ length: count }, () => this.build(overrides));
+  }
+
+  /**
+   * Build multiple silhouettes
+   */
+  buildSilhouettes(count: number, overrides: Partial<CatalogItem> = {}): CatalogItem[] {
+    return Array.from({ length: count }, () => this.buildSilhouette(overrides));
+  }
+
+  /**
+   * Build multiple fabrics
+   */
+  buildFabrics(count: number, overrides: Partial<CatalogItem> = {}): CatalogItem[] {
+    return Array.from({ length: count }, () => this.buildFabric(overrides));
+  }
+
+  /**
+   * Build multiple patterns
+   */
+  buildPatterns(count: number, overrides: Partial<CatalogItem> = {}): CatalogItem[] {
+    return Array.from({ length: count }, () => this.buildPattern(overrides));
+  }
+
+  /**
+   * Save catalog item to database
+   */
+  async save(overrides: Partial<CatalogItem> = {}): Promise<CatalogItem> {
+    if (!this.dataSource) {
+      throw new Error('DataSource not set. Call setDataSource() first or pass it to constructor.');
+    }
+
+    const item = this.build(overrides);
+    const repository = this.dataSource.getRepository(CatalogItem);
+    return await repository.save(item);
   }
 
   /**
    * Save silhouette to database
    */
-  async saveSilhouette(overrides: Partial<Silhouette> = {}): Promise<Silhouette> {
+  async saveSilhouette(overrides: Partial<CatalogItem> = {}): Promise<CatalogItem> {
     if (!this.dataSource) {
       throw new Error('DataSource not set. Call setDataSource() first or pass it to constructor.');
     }
 
-    const silhouette = this.createSilhouette(overrides);
-    const repository = this.dataSource.getRepository('Silhouette');
+    const silhouette = this.buildSilhouette(overrides);
+    const repository = this.dataSource.getRepository(CatalogItem);
     return await repository.save(silhouette);
   }
 
   /**
    * Save fabric to database
    */
-  async saveFabric(overrides: Partial<Fabric> = {}): Promise<Fabric> {
+  async saveFabric(overrides: Partial<CatalogItem> = {}): Promise<CatalogItem> {
     if (!this.dataSource) {
       throw new Error('DataSource not set. Call setDataSource() first or pass it to constructor.');
     }
 
-    const fabric = this.createFabric(overrides);
-    const repository = this.dataSource.getRepository('Fabric');
+    const fabric = this.buildFabric(overrides);
+    const repository = this.dataSource.getRepository(CatalogItem);
     return await repository.save(fabric);
   }
 
   /**
    * Save pattern to database
    */
-  async savePattern(overrides: Partial<Pattern> = {}): Promise<Pattern> {
+  async savePattern(overrides: Partial<CatalogItem> = {}): Promise<CatalogItem> {
     if (!this.dataSource) {
       throw new Error('DataSource not set. Call setDataSource() first or pass it to constructor.');
     }
 
-    const pattern = this.createPattern(overrides);
-    const repository = this.dataSource.getRepository('Pattern');
+    const pattern = this.buildPattern(overrides);
+    const repository = this.dataSource.getRepository(CatalogItem);
     return await repository.save(pattern);
+  }
+
+  /**
+   * Save multiple catalog items
+   */
+  async saveMany(count: number, overrides: Partial<CatalogItem> = {}): Promise<CatalogItem[]> {
+    if (!this.dataSource) {
+      throw new Error('DataSource not set. Call setDataSource() first or pass it to constructor.');
+    }
+
+    const items = this.buildMany(count, overrides);
+    const repository = this.dataSource.getRepository(CatalogItem);
+    return await repository.save(items);
   }
 
   /**
