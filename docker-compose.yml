@@ -76,6 +76,26 @@ services:
     networks:
       - fashion_wallet_network
 
+  # ML Avatar Service
+  ml_service:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    container_name: fashion_wallet_ml_service
+    restart: unless-stopped
+    environment:
+      FLASK_ENV: development
+      LOG_LEVEL: INFO
+    ports:
+      - '5000:5000'
+    networks:
+      - fashion_wallet_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Backend Application (Development)
   app:
     build:
@@ -98,6 +118,8 @@ services:
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_BUCKET: outfit-designer-assets
+      ML_SERVICE_URL: http://ml_service:5000
+      USE_MOCK_ML: true
     ports:
       - '3000:3000'
     volumes:
@@ -109,6 +131,7 @@ services:
       - redis
       - minio
       - elasticsearch
+      - ml_service
     networks:
       - fashion_wallet_network
 
