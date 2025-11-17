@@ -28,9 +28,9 @@ export interface MultipartUploadState {
 }
 
 /**
- * S3 Configuration
+ * S3 Configuration for Multipart Handler
  */
-export interface S3Config {
+export interface MultipartS3Config {
   region: string;
   accessKeyId: string;
   secretAccessKey: string;

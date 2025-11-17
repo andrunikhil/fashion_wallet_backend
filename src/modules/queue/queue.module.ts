@@ -8,10 +8,10 @@ import { JobController } from './controllers/job.controller';
   imports: [
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
+      useFactory: async (configService: ConfigService) => ({
         connection: {
           host: configService.get('REDIS_HOST', 'localhost'),
-          port: configService.get('REDIS_PORT', 6379),
+          port: parseInt(configService.get('REDIS_PORT', '6379')),
         },
       }),
       inject: [ConfigService],

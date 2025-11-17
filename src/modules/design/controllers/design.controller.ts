@@ -1,4 +1,5 @@
 import {
+  UseGuards,
   Controller,
   Get,
   Post,
@@ -12,6 +13,9 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
+import { UserId } from '../../../shared/decorators/current-user.decorator';
 import { DesignService } from '../services/design.service';
 import { CreateDesignDto } from '../dto/create-design.dto';
 import { UpdateDesignDto } from '../dto/update-design.dto';
@@ -24,6 +28,9 @@ import { QueryDesignsDto } from '../dto/query-designs.dto';
  * TODO: Add authentication guards (@UseGuards(AuthGuard))
  * TODO: Add user context decorator (@CurrentUser())
  */
+@ApiTags('Designs')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('api/designs')
 export class DesignController {
   constructor(private readonly designService: DesignService) {}
@@ -36,10 +43,10 @@ export class DesignController {
   @HttpCode(HttpStatus.CREATED)
   async createDesign(
     @Body(ValidationPipe) createDto: CreateDesignDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const design = await this.designService.createDesign(userId, createDto);
 
@@ -56,10 +63,10 @@ export class DesignController {
   @Get()
   async listDesigns(
     @Query(ValidationPipe) query: QueryDesignsDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const result = await this.designService.listDesigns(userId, query);
 
@@ -81,10 +88,10 @@ export class DesignController {
   @Get(':id')
   async getDesign(
     @Param('id', ParseUUIDPipe) id: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const design = await this.designService.getDesign(id, userId);
 
@@ -101,10 +108,10 @@ export class DesignController {
   @Get(':id/state')
   async getDesignState(
     @Param('id', ParseUUIDPipe) id: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const state = await this.designService.getDesignWithFullState(id, userId);
 
@@ -122,10 +129,10 @@ export class DesignController {
   async updateDesign(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(ValidationPipe) updateDto: UpdateDesignDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const design = await this.designService.updateDesign(id, userId, updateDto);
 
@@ -143,10 +150,10 @@ export class DesignController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteDesign(
     @Param('id', ParseUUIDPipe) id: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     await this.designService.deleteDesign(id, userId);
   }
@@ -158,10 +165,10 @@ export class DesignController {
   @Post(':id/publish')
   async publishDesign(
     @Param('id', ParseUUIDPipe) id: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const design = await this.designService.publishDesign(id, userId);
 
@@ -178,10 +185,10 @@ export class DesignController {
   @Post(':id/unpublish')
   async unpublishDesign(
     @Param('id', ParseUUIDPipe) id: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const design = await this.designService.unpublishDesign(id, userId);
 
@@ -198,10 +205,10 @@ export class DesignController {
   @Post(':id/archive')
   async archiveDesign(
     @Param('id', ParseUUIDPipe) id: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const design = await this.designService.archiveDesign(id, userId);
 
@@ -219,10 +226,10 @@ export class DesignController {
   async forkDesign(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body?: { name?: string },
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
+
+
 
     const design = await this.designService.forkDesign(
       id,

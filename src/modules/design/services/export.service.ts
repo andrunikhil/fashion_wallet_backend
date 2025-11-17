@@ -5,6 +5,8 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { Export } from '../entities/export.entity';
 import { ExportRepository } from '../repositories/export.repository';
 import { DesignRepository } from '../repositories/design.repository';
@@ -26,6 +28,8 @@ export class ExportService {
   private readonly MAX_RETRY_ATTEMPTS = 3;
 
   constructor(
+    @InjectQueue('export')
+    private readonly exportQueue: Queue,
     private readonly exportRepo: ExportRepository,
     private readonly designRepo: DesignRepository,
   ) {}
@@ -66,8 +70,8 @@ export class ExportService {
       `Created export job ${exportRecord.id} for design ${designId} (type: ${exportDto.type})`,
     );
 
-    // TODO: Queue job for processing (integrate with Bull, BullMQ, or similar)
-    // Example: await this.queueService.addExportJob(exportRecord.id);
+    // Queue job for processing
+    await this.queueExportJob(exportRecord);
 
     return exportRecord;
   }
@@ -129,7 +133,14 @@ export class ExportService {
 
     this.logger.log(`Export ${exportId} cancelled by user ${userId}`);
 
-    // TODO: Signal worker to stop processing if in progress
+    // Signal worker to stop processing if in progress
+    // Find and remove job from queue
+    const jobs = await this.exportQueue.getJobs(['waiting', 'active', 'delayed']);
+    const job = jobs.find(j => j.data.exportId === exportId);
+    if (job) {
+      await job.remove();
+      this.logger.log(`Removed export job ${job.id} from queue`);
+    }
   }
 
   /**
@@ -264,6 +275,54 @@ export class ExportService {
     }
 
     return deletedCount;
+  }
+
+  /**
+   * Queue export job for processing
+   */
+  private async queueExportJob(exportRecord: Export): Promise<void> {
+    const jobName = `export-${exportRecord.type}`;
+    const jobData = {
+      exportId: exportRecord.id,
+      designId: exportRecord.designId,
+      userId: exportRecord.userId,
+      type: exportRecord.type,
+      options: exportRecord.options,
+    };
+
+    // Determine priority based on export type
+    const priority = this.getExportPriority(exportRecord.type);
+
+    await this.exportQueue.add(jobName, jobData, {
+      priority,
+      attempts: this.MAX_RETRY_ATTEMPTS,
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
+      removeOnComplete: {
+        age: 86400, // Keep completed jobs for 24 hours
+        count: 1000,
+      },
+      removeOnFail: {
+        age: 86400 * 3, // Keep failed jobs for 3 days
+      },
+    });
+
+    this.logger.log(`Queued ${jobName} job for export ${exportRecord.id}`);
+  }
+
+  /**
+   * Get export priority based on type
+   */
+  private getExportPriority(type: string): number {
+    const priorities: Record<string, number> = {
+      image: 5,
+      video: 10,
+      model: 10,
+      techpack: 8,
+    };
+    return priorities[type] || 10;
   }
 
   /**

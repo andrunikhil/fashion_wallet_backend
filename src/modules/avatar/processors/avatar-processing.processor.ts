@@ -1,14 +1,21 @@
 import { Processor, Process, OnQueueCompleted, OnQueueFailed } from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
+import { Logger, Inject } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AvatarProcessingJobData, ProcessingResult } from '../../queue/interfaces/job.interface';
 import { AvatarRepository } from '../repositories/avatar.repository';
 import { MeasurementRepository } from '../repositories/measurement.repository';
 import { ProcessingJobRepository } from '../repositories/processing-job.repository';
-import { MLService } from '../services/ml/ml.service';
+import { PhotoRepository } from '../repositories/photo.repository';
+import { MockMLService } from '../services/ml/mock-ml.service';
 import { StorageService } from '../services/storage.service';
 import { Photo } from '../services/ml/ml.interface';
+import { AvatarStatus } from '../../../infrastructure/database/entities/avatar.entity';
+import {
+  ProcessingJobStatus,
+  ProcessingJobType,
+} from '../../../infrastructure/database/entities/processing-job.entity';
+import { MeasurementSource } from '../../../infrastructure/database/entities/measurement.entity';
 
 @Processor('avatar-processing')
 export class AvatarProcessingProcessor {
@@ -18,7 +25,8 @@ export class AvatarProcessingProcessor {
     private readonly avatarRepo: AvatarRepository,
     private readonly measurementRepo: MeasurementRepository,
     private readonly processingJobRepo: ProcessingJobRepository,
-    private readonly mlService: MLService,
+    private readonly photoRepo: PhotoRepository,
+    @Inject('ML_SERVICE') private readonly mlService: MockMLService,
     private readonly storageService: StorageService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -36,31 +44,33 @@ export class AvatarProcessingProcessor {
       await this.processingJobRepo.create({
         id: job.id as string,
         avatarId,
-        jobType: 'photo-processing',
-        status: 'processing',
+        userId,
+        jobType: ProcessingJobType.PHOTO_PROCESSING,
+        status: ProcessingJobStatus.PROCESSING,
+        inputData: { photoUrls, unit, customization },
         startedAt: new Date(),
       });
 
       // Step 1: Download photos (10%)
       await job.updateProgress(10);
-      await this.updateAvatarStatus(avatarId, 'processing', 'Loading photos');
+      await this.updateAvatarStatus(avatarId, AvatarStatus.PROCESSING, 'Loading photos');
       const photos = await this.downloadPhotos(photoUrls);
 
       // Step 2: Background removal (20%)
       await job.updateProgress(20);
-      await this.updateAvatarStatus(avatarId, 'processing', 'Removing background');
+      await this.updateAvatarStatus(avatarId, AvatarStatus.PROCESSING, 'Removing background');
       this.emitProgress(avatarId, job.id as string, 20, 'Removing background');
       const maskedPhotos = await this.mlService.removeBackground(photos);
 
       // Step 3: Pose detection (40%)
       await job.updateProgress(40);
-      await this.updateAvatarStatus(avatarId, 'processing', 'Detecting body landmarks');
+      await this.updateAvatarStatus(avatarId, AvatarStatus.PROCESSING, 'Detecting body landmarks');
       this.emitProgress(avatarId, job.id as string, 40, 'Detecting body landmarks');
       const landmarks = await this.mlService.detectPose(maskedPhotos);
 
       // Step 4: Measurement extraction (60%)
       await job.updateProgress(60);
-      await this.updateAvatarStatus(avatarId, 'processing', 'Extracting measurements');
+      await this.updateAvatarStatus(avatarId, AvatarStatus.PROCESSING, 'Extracting measurements');
       this.emitProgress(avatarId, job.id as string, 60, 'Extracting measurements');
       const measurements = await this.mlService.extractMeasurements(
         landmarks,
@@ -70,39 +80,50 @@ export class AvatarProcessingProcessor {
 
       // Step 5: Body type classification (70%)
       await job.updateProgress(70);
-      await this.updateAvatarStatus(avatarId, 'processing', 'Classifying body type');
+      await this.updateAvatarStatus(avatarId, AvatarStatus.PROCESSING, 'Classifying body type');
       this.emitProgress(avatarId, job.id as string, 70, 'Classifying body type');
       const { bodyType, confidence: bodyTypeConfidence } = await this.mlService.classifyBodyType(measurements);
 
       // Step 6: Save measurements to database (80%)
       await job.updateProgress(80);
-      await this.updateAvatarStatus(avatarId, 'processing', 'Saving measurements');
+      await this.updateAvatarStatus(avatarId, AvatarStatus.PROCESSING, 'Saving measurements');
       await this.measurementRepo.create({
         avatarId,
-        ...measurements,
-        source: 'auto',
-        confidence: measurements.confidence,
+        height: measurements.height,
+        shoulderWidth: measurements.shoulderWidth,
+        chestCircumference: measurements.chestCircumference,
+        waistCircumference: measurements.waistCircumference,
+        hipCircumference: measurements.hipCircumference,
+        armLength: measurements.armLength,
+        inseamLength: measurements.inseam,
+        neckCircumference: measurements.neckCircumference,
+        thighCircumference: measurements.thighCircumference,
+        unit: measurements.unit === 'metric' ? 'metric' : 'imperial',
+        source: MeasurementSource.AUTO,
+        confidenceScore: measurements.confidence,
+        metadata: { landmarks },
       });
 
       // Step 7: Update avatar with body type (90%)
       await job.updateProgress(90);
       await this.avatarRepo.update(avatarId, {
-        bodyType,
-        bodyTypeConfidence,
-        landmarks: JSON.stringify(landmarks),
+        bodyType: bodyType as any,
+        confidenceScore: bodyTypeConfidence,
       });
 
       // Step 8: Complete (100%)
       await job.updateProgress(100);
-      await this.updateAvatarStatus(avatarId, 'ready', 'Complete');
+      await this.updateAvatarStatus(avatarId, AvatarStatus.READY, 'Complete');
 
       const processingTime = Date.now() - startTime;
 
       // Update processing job record
       await this.processingJobRepo.update(job.id as string, {
-        status: 'completed',
+        status: ProcessingJobStatus.COMPLETED,
+        progress: 100,
         completedAt: new Date(),
-        result: JSON.stringify({ bodyType, measurements }),
+        processingDurationMs: processingTime,
+        resultData: { bodyType, measurements },
       });
 
       // Emit completion event
@@ -126,14 +147,15 @@ export class AvatarProcessingProcessor {
     } catch (error) {
       this.logger.error(`Failed to process avatar ${avatarId}:`, error);
 
-      await this.updateAvatarStatus(avatarId, 'error', error.message);
+      await this.updateAvatarStatus(avatarId, AvatarStatus.ERROR, error.message);
 
       // Update processing job record
       try {
         await this.processingJobRepo.update(job.id as string, {
-          status: 'failed',
-          completedAt: new Date(),
+          status: ProcessingJobStatus.FAILED,
+          failedAt: new Date(),
           errorMessage: error.message,
+          errorStack: error.stack,
         });
       } catch (updateError) {
         this.logger.error('Failed to update processing job:', updateError);
@@ -199,10 +221,15 @@ export class AvatarProcessingProcessor {
 
   private async updateAvatarStatus(
     avatarId: string,
-    status: string,
+    status: AvatarStatus,
     message?: string,
   ): Promise<void> {
-    await this.avatarRepo.update(avatarId, { status });
+    const updateData: any = { status };
+    if (message) {
+      updateData.processingMessage = message;
+    }
+
+    await this.avatarRepo.update(avatarId, updateData);
 
     // Emit WebSocket event for real-time updates
     this.eventEmitter.emit('avatar.status.update', {

@@ -51,7 +51,9 @@ export class QueueService {
     }
 
     const state = await job.getState();
-    const progress = job.progress;
+    const progress = typeof job.progress === 'string'
+      ? parseInt(job.progress) || 0
+      : job.progress || 0;
 
     return {
       id: job.id,

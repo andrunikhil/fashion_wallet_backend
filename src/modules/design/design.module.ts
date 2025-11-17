@@ -51,12 +51,14 @@ import { LayerController } from './controllers/layer.controller';
 import { ExportController } from './controllers/export.controller';
 import { VersionController } from './controllers/version.controller';
 import { CanvasSettingsController } from './controllers/canvas-settings.controller';
+import { RenderingController } from './controllers/rendering.controller';
 
 // Gateways
 import { DesignGateway } from './gateways/design.gateway';
 
 // Workers
 import { RenderWorker } from './workers/render.worker';
+import { ExportWorker } from './workers/export.worker';
 
 @Module({
   imports: [
@@ -78,9 +80,12 @@ import { RenderWorker } from './workers/render.worker';
       { name: RenderCache.name, schema: RenderCacheSchema },
     ]),
 
-    // BullMQ Queue for rendering
+    // Bull Queues
     BullModule.registerQueue({
       name: 'render',
+    }),
+    BullModule.registerQueue({
+      name: 'export',
     }),
   ],
 
@@ -90,6 +95,7 @@ import { RenderWorker } from './workers/render.worker';
     ExportController,
     VersionController,
     CanvasSettingsController,
+    RenderingController,
   ],
 
   providers: [
@@ -108,6 +114,7 @@ import { RenderWorker } from './workers/render.worker';
 
     // Workers
     RenderWorker,
+    ExportWorker,
 
     // Repositories
     DesignRepository,

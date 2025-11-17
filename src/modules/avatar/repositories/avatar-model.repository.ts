@@ -17,6 +17,10 @@ export class AvatarModelRepository {
     return this.model.findOne({ avatarId }).exec();
   }
 
+  async getModel(avatarId: string): Promise<AvatarModel | null> {
+    return this.findByAvatarId(avatarId);
+  }
+
   async create(data: Partial<AvatarModel>): Promise<AvatarModel> {
     const model = new this.model(data);
     return model.save();

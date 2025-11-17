@@ -9,14 +9,17 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger, UseGuards } from '@nestjs/common';
+import { WsJwtAuthGuard } from '../../../shared/guards/ws-jwt-auth.guard';
 import { CollaborationService } from '../services/collaboration.service';
 
 /**
  * WebSocket Gateway for Design Service
  * Handles real-time collaboration and updates for design editing
  *
- * TODO: Add authentication middleware for WebSocket connections
- * TODO: Implement JWT token validation from socket handshake
+ * Authentication is handled by WsJwtAuthGuard
+ * JWT token should be provided via:
+ * - Query param: ?token=<jwt>
+ * - Auth object: { auth: { token: '<jwt>' } }
  */
 @WebSocketGateway({
   namespace: '/design',
@@ -26,6 +29,7 @@ import { CollaborationService } from '../services/collaboration.service';
   },
   transports: ['websocket', 'polling'],
 })
+@UseGuards(WsJwtAuthGuard)
 export class DesignGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
@@ -41,13 +45,12 @@ export class DesignGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   async handleConnection(client: Socket) {
     try {
-      // TODO: Extract user from JWT token in handshake
-      const userId = this.extractUserIdFromSocket(client);
+      // User is already authenticated by WsJwtAuthGuard
+      // User data is attached to client.data by the guard
+      const userId = client.data.userId;
+      const user = client.data.user;
 
       this.logger.log(`Client connected: ${client.id} (User: ${userId})`);
-
-      // Store user info in socket
-      client.data.userId = userId;
     } catch (error) {
       this.logger.error(`Connection failed for ${client.id}:`, error);
       client.disconnect();
@@ -441,18 +444,4 @@ export class DesignGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  /**
-   * Extract user ID from socket
-   * TODO: Implement JWT token extraction from socket handshake
-   */
-  private extractUserIdFromSocket(client: Socket): string {
-    // For now, get from query params (NOT SECURE - use JWT in production)
-    const userId = client.handshake.query.userId as string;
-
-    if (!userId) {
-      throw new Error('User ID not provided');
-    }
-
-    return userId;
-  }
 }
