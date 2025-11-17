@@ -1,297 +1,350 @@
-import sharp from 'sharp';
-
-/**
- * Thumbnail size preset
- */
-export interface ThumbnailSize {
-  name: string;
-  width: number;
-  height: number;
-}
-
-/**
- * Common thumbnail size presets
- */
-export const THUMBNAIL_PRESETS = {
-  SMALL: { name: 'small', width: 150, height: 150 },
-  MEDIUM: { name: 'medium', width: 300, height: 300 },
-  LARGE: { name: 'large', width: 600, height: 600 },
-  SQUARE_SM: { name: 'square-sm', width: 200, height: 200 },
-  SQUARE_MD: { name: 'square-md', width: 400, height: 400 },
-  SQUARE_LG: { name: 'square-lg', width: 800, height: 800 },
-  WIDE_SM: { name: 'wide-sm', width: 320, height: 180 },
-  WIDE_MD: { name: 'wide-md', width: 640, height: 360 },
-  WIDE_LG: { name: 'wide-lg', width: 1280, height: 720 },
-};
-
 /**
  * Thumbnail Generator Utility
- * Generates thumbnails in various sizes
+ * Generate thumbnails and sprite sheets
  */
+
+import sharp from 'sharp';
+import {
+  ThumbnailOptions,
+  SpriteSheetOptions,
+  ImageFormat,
+} from '../../../types/media.types';
+import { ImageUtil } from './image.util';
+import { ImageConverter } from './image-converter.util';
+
 export class ThumbnailGenerator {
+  // Preset thumbnail sizes
+  static readonly PRESETS = {
+    tiny: { width: 64, height: 64 },
+    small: { width: 128, height: 128 },
+    medium: { width: 256, height: 256 },
+    large: { width: 512, height: 512 },
+    xlarge: { width: 1024, height: 1024 },
+  };
+
   /**
-   * Generate multiple thumbnail sizes from an image
-   * @param image - Image buffer
-   * @param sizes - Array of thumbnail sizes
-   * @returns Map of thumbnail name to buffer
+   * Generate thumbnail
+   * @param input - Image buffer
+   * @param options - Thumbnail options
+   * @returns Thumbnail buffer
    */
   static async generate(
-    image: Buffer,
-    sizes: ThumbnailSize[],
-  ): Promise<Map<string, Buffer>> {
+    input: Buffer,
+    options: ThumbnailOptions,
+  ): Promise<Buffer> {
     try {
-      const thumbnails = new Map<string, Buffer>();
-
-      const promises = sizes.map(async (size) => {
-        const thumbnail = await this.generateSingle(image, size.width, size.height);
-        return { name: size.name, buffer: thumbnail };
+      let thumbnail = await ImageUtil.resize(input, {
+        width: options.width,
+        height: options.height,
+        fit: options.fit || 'cover',
+        position: options.position || 'center',
       });
 
-      const results = await Promise.all(promises);
-
-      for (const result of results) {
-        thumbnails.set(result.name, result.buffer);
+      // Convert to specified format if provided
+      if (options.format) {
+        thumbnail = await ImageConverter.convert(thumbnail, {
+          format: options.format,
+          quality: options.quality || 80,
+          progressive: true,
+        });
       }
 
-      return thumbnails;
+      return thumbnail;
     } catch (error) {
-      throw new Error(
-        `Failed to generate thumbnails: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      throw new Error(`Failed to generate thumbnail: ${error.message}`);
     }
   }
 
   /**
-   * Generate a single thumbnail
-   * @param image - Image buffer
+   * Generate multiple thumbnail sizes
+   * @param input - Image buffer
+   * @param presets - Array of preset names or custom sizes
+   * @param format - Output format
+   * @param quality - Image quality
+   * @returns Map of size name to buffer
+   */
+  static async generateMultipleSizes(
+    input: Buffer,
+    presets: Array<keyof typeof ThumbnailGenerator.PRESETS | ThumbnailOptions> = [
+      'small',
+      'medium',
+      'large',
+    ],
+    format?: ImageFormat,
+    quality: number = 80,
+  ): Promise<Map<string, Buffer>> {
+    const thumbnails = new Map<string, Buffer>();
+
+    for (const preset of presets) {
+      try {
+        let options: ThumbnailOptions;
+        let key: string;
+
+        if (typeof preset === 'string') {
+          // Use preset
+          options = {
+            ...this.PRESETS[preset],
+            format,
+            quality,
+          };
+          key = preset;
+        } else {
+          // Use custom options
+          options = { ...preset, format, quality };
+          key = `${preset.width}x${preset.height}`;
+        }
+
+        const thumbnail = await this.generate(input, options);
+        thumbnails.set(key, thumbnail);
+      } catch (error) {
+        console.error(`Failed to generate ${preset} thumbnail:`, error.message);
+      }
+    }
+
+    return thumbnails;
+  }
+
+  /**
+   * Generate smart thumbnail with attention-based cropping
+   * Uses Sharp's attention strategy to focus on interesting areas
+   * @param input - Image buffer
    * @param width - Thumbnail width
    * @param height - Thumbnail height
-   * @param fit - How to fit the image (default: 'cover')
+   * @param format - Output format
+   * @param quality - Image quality
    * @returns Thumbnail buffer
    */
-  static async generateSingle(
-    image: Buffer,
+  static async generateSmart(
+    input: Buffer,
     width: number,
     height: number,
-    fit: 'cover' | 'contain' | 'fill' | 'inside' | 'outside' = 'cover',
+    format?: ImageFormat,
+    quality: number = 80,
   ): Promise<Buffer> {
     try {
-      return await sharp(image)
-        .resize(width, height, {
-          fit,
-          position: 'center',
-        })
-        .toBuffer();
-    } catch (error) {
-      throw new Error(
-        `Failed to generate thumbnail: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Generate thumbnail with smart cropping (attention-based)
-   * @param image - Image buffer
-   * @param size - Thumbnail size
-   * @returns Thumbnail buffer
-   */
-  static async generateWithSmartCrop(
-    image: Buffer,
-    size: ThumbnailSize,
-  ): Promise<Buffer> {
-    try {
-      return await sharp(image)
-        .resize(size.width, size.height, {
-          fit: 'cover',
-          position: 'attention', // Smart crop using entropy/edge detection
-        })
-        .toBuffer();
-    } catch (error) {
-      throw new Error(
-        `Failed to generate smart crop thumbnail: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Generate a placeholder thumbnail (low quality, small size)
-   * @param width - Placeholder width
-   * @param height - Placeholder height
-   * @param color - Background color (default: grey)
-   * @returns Placeholder buffer
-   */
-  static async generatePlaceholder(
-    width: number,
-    height: number,
-    color: string = '#cccccc',
-  ): Promise<Buffer> {
-    try {
-      return await sharp({
-        create: {
+      let thumbnail = await sharp(input)
+        .resize({
           width,
           height,
-          channels: 3,
-          background: color,
-        },
-      })
-        .jpeg({ quality: 20 })
-        .toBuffer();
-    } catch (error) {
-      throw new Error(
-        `Failed to generate placeholder: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Generate LQIP (Low Quality Image Placeholder)
-   * @param image - Image buffer
-   * @param width - LQIP width (default: 20)
-   * @returns LQIP buffer
-   */
-  static async generateLQIP(image: Buffer, width: number = 20): Promise<Buffer> {
-    try {
-      return await sharp(image)
-        .resize(width, null, {
-          fit: 'inside',
-        })
-        .blur(1)
-        .jpeg({ quality: 20 })
-        .toBuffer();
-    } catch (error) {
-      throw new Error(
-        `Failed to generate LQIP: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Generate thumbnails using preset sizes
-   * @param image - Image buffer
-   * @param presets - Array of preset names (e.g., ['SMALL', 'MEDIUM'])
-   * @returns Map of preset name to buffer
-   */
-  static async generateFromPresets(
-    image: Buffer,
-    presets: Array<keyof typeof THUMBNAIL_PRESETS>,
-  ): Promise<Map<string, Buffer>> {
-    try {
-      const sizes = presets.map((preset) => THUMBNAIL_PRESETS[preset]);
-      return await this.generate(image, sizes);
-    } catch (error) {
-      throw new Error(
-        `Failed to generate from presets: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Generate responsive image set
-   * @param image - Image buffer
-   * @param widths - Array of widths to generate
-   * @returns Map of width to buffer
-   */
-  static async generateResponsiveSet(
-    image: Buffer,
-    widths: number[] = [320, 640, 1024, 1920],
-  ): Promise<Map<number, Buffer>> {
-    try {
-      const set = new Map<number, Buffer>();
-
-      const promises = widths.map(async (width) => {
-        const resized = await sharp(image)
-          .resize(width, null, {
-            fit: 'inside',
-            withoutEnlargement: true,
-          })
-          .toBuffer();
-        return { width, buffer: resized };
-      });
-
-      const results = await Promise.all(promises);
-
-      for (const result of results) {
-        set.set(result.width, result.buffer);
-      }
-
-      return set;
-    } catch (error) {
-      throw new Error(
-        `Failed to generate responsive set: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Generate square thumbnail (crop to square)
-   * @param image - Image buffer
-   * @param size - Square size
-   * @returns Square thumbnail buffer
-   */
-  static async generateSquare(image: Buffer, size: number): Promise<Buffer> {
-    try {
-      return await sharp(image)
-        .resize(size, size, {
           fit: 'cover',
           position: 'attention',
         })
         .toBuffer();
+
+      // Convert to specified format if provided
+      if (format) {
+        thumbnail = await ImageConverter.convert(thumbnail, {
+          format,
+          quality,
+          progressive: true,
+        });
+      }
+
+      return thumbnail;
+    } catch (error) {
+      throw new Error(`Failed to generate smart thumbnail: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate square thumbnail
+   * @param input - Image buffer
+   * @param size - Square size
+   * @param format - Output format
+   * @param quality - Image quality
+   * @returns Square thumbnail buffer
+   */
+  static async generateSquare(
+    input: Buffer,
+    size: number,
+    format?: ImageFormat,
+    quality: number = 80,
+  ): Promise<Buffer> {
+    return this.generate(input, {
+      width: size,
+      height: size,
+      fit: 'cover',
+      position: 'center',
+      format,
+      quality,
+    });
+  }
+
+  /**
+   * Generate sprite sheet from multiple images
+   * @param options - Sprite sheet options
+   * @returns Sprite sheet buffer
+   */
+  static async generateSpriteSheet(
+    options: SpriteSheetOptions,
+  ): Promise<Buffer> {
+    try {
+      if (options.images.length === 0) {
+        throw new Error('No images provided for sprite sheet');
+      }
+
+      // Get metadata of first image to determine cell size
+      const firstMeta = await sharp(options.images[0]).metadata();
+      const cellWidth = firstMeta.width || 0;
+      const cellHeight = firstMeta.height || 0;
+
+      if (cellWidth === 0 || cellHeight === 0) {
+        throw new Error('Invalid image dimensions');
+      }
+
+      const columns = options.columns;
+      const rows = Math.ceil(options.images.length / columns);
+      const spacing = options.spacing || 0;
+      const background = options.background || 'transparent';
+
+      const spriteWidth = columns * cellWidth + (columns - 1) * spacing;
+      const spriteHeight = rows * cellHeight + (rows - 1) * spacing;
+
+      // Create base sprite sheet
+      const sprite = sharp({
+        create: {
+          width: spriteWidth,
+          height: spriteHeight,
+          channels: 4,
+          background,
+        },
+      });
+
+      // Prepare composite inputs
+      const compositeInputs: Array<{
+        input: Buffer;
+        left: number;
+        top: number;
+      }> = [];
+
+      for (let i = 0; i < options.images.length; i++) {
+        const row = Math.floor(i / columns);
+        const col = i % columns;
+
+        const left = col * (cellWidth + spacing);
+        const top = row * (cellHeight + spacing);
+
+        compositeInputs.push({
+          input: options.images[i],
+          left,
+          top,
+        });
+      }
+
+      return await sprite.composite(compositeInputs).png().toBuffer();
+    } catch (error) {
+      throw new Error(`Failed to generate sprite sheet: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate thumbnail with watermark
+   * @param input - Image buffer
+   * @param watermark - Watermark image buffer
+   * @param options - Thumbnail options
+   * @param watermarkPosition - Position of watermark (e.g., 'bottom-right')
+   * @returns Thumbnail with watermark
+   */
+  static async generateWithWatermark(
+    input: Buffer,
+    watermark: Buffer,
+    options: ThumbnailOptions,
+    watermarkPosition: 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'bottom-right',
+  ): Promise<Buffer> {
+    try {
+      // Generate base thumbnail
+      let thumbnail = await this.generate(input, options);
+
+      // Get thumbnail dimensions
+      const thumbMeta = await sharp(thumbnail).metadata();
+      const thumbWidth = thumbMeta.width || 0;
+      const thumbHeight = thumbMeta.height || 0;
+
+      // Get watermark dimensions
+      const watermarkMeta = await sharp(watermark).metadata();
+      const watermarkWidth = watermarkMeta.width || 0;
+      const watermarkHeight = watermarkMeta.height || 0;
+
+      // Calculate watermark position
+      let left = 0;
+      let top = 0;
+      const padding = 10;
+
+      switch (watermarkPosition) {
+        case 'center':
+          left = Math.floor((thumbWidth - watermarkWidth) / 2);
+          top = Math.floor((thumbHeight - watermarkHeight) / 2);
+          break;
+        case 'top-left':
+          left = padding;
+          top = padding;
+          break;
+        case 'top-right':
+          left = thumbWidth - watermarkWidth - padding;
+          top = padding;
+          break;
+        case 'bottom-left':
+          left = padding;
+          top = thumbHeight - watermarkHeight - padding;
+          break;
+        case 'bottom-right':
+          left = thumbWidth - watermarkWidth - padding;
+          top = thumbHeight - watermarkHeight - padding;
+          break;
+      }
+
+      // Apply watermark
+      thumbnail = await ImageUtil.composite(thumbnail, [
+        { input: watermark, left, top },
+      ]);
+
+      return thumbnail;
     } catch (error) {
       throw new Error(
-        `Failed to generate square thumbnail: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to generate thumbnail with watermark: ${error.message}`,
       );
     }
   }
 
   /**
    * Generate circular thumbnail
-   * @param image - Image buffer
+   * @param input - Image buffer
    * @param size - Circle diameter
-   * @returns Circular thumbnail buffer (PNG with transparency)
+   * @param format - Output format (PNG recommended for transparency)
+   * @param quality - Image quality
+   * @returns Circular thumbnail buffer
    */
-  static async generateCircular(image: Buffer, size: number): Promise<Buffer> {
+  static async generateCircular(
+    input: Buffer,
+    size: number,
+    format: ImageFormat = ImageFormat.PNG,
+    quality: number = 80,
+  ): Promise<Buffer> {
     try {
-      const roundedCorners = Buffer.from(
-        `<svg><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}"/></svg>`,
+      // Create a circular mask
+      const circle = Buffer.from(
+        `<svg><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" /></svg>`,
       );
 
-      return await sharp(image)
-        .resize(size, size, {
-          fit: 'cover',
-          position: 'attention',
-        })
+      // Resize and apply mask
+      const thumbnail = await sharp(input)
+        .resize(size, size, { fit: 'cover', position: 'center' })
         .composite([
           {
-            input: roundedCorners,
+            input: circle,
             blend: 'dest-in',
           },
         ])
-        .png()
         .toBuffer();
-    } catch (error) {
-      throw new Error(
-        `Failed to generate circular thumbnail: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
 
-  /**
-   * Batch generate thumbnails for multiple images
-   * @param images - Array of image buffers
-   * @param sizes - Array of thumbnail sizes
-   * @returns Array of thumbnail maps
-   */
-  static async batchGenerate(
-    images: Buffer[],
-    sizes: ThumbnailSize[],
-  ): Promise<Map<string, Buffer>[]> {
-    try {
-      return await Promise.all(
-        images.map((image) => this.generate(image, sizes)),
-      );
+      // Convert to specified format
+      return await ImageConverter.convert(thumbnail, {
+        format,
+        quality,
+      });
     } catch (error) {
       throw new Error(
-        `Failed to batch generate thumbnails: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to generate circular thumbnail: ${error.message}`,
       );
     }
   }
