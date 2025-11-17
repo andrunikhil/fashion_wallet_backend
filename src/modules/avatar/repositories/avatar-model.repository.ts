@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 import {
   AvatarModel,
   AvatarModelDocument,
-} from '../../../infrastructure/database/schemas/avatar-model.schema';
+} from '../schemas/avatar-model.schema';
 
 @Injectable()
 export class AvatarModelRepository {
