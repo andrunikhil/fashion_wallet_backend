@@ -10,7 +10,11 @@ import {
   ValidationPipe,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
+import { UserId } from '../../../shared/decorators/current-user.decorator';
 import { VersionControlService } from '../services/version-control.service';
 import { CreateVersionDto } from '../dto/create-version.dto';
 
@@ -19,10 +23,10 @@ import { CreateVersionDto } from '../dto/create-version.dto';
  * Handles design version control and restoration
  *
  * All routes are nested under /api/designs/:designId/versions
- *
- * TODO: Add authentication guards (@UseGuards(AuthGuard))
- * TODO: Add user context decorator (@CurrentUser())
  */
+@ApiTags('Versions')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('api/designs/:designId/versions')
 export class VersionController {
   constructor(
@@ -38,11 +42,8 @@ export class VersionController {
   async createCheckpoint(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Body(ValidationPipe) createDto: CreateVersionDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const version = await this.versionControlService.createCheckpoint(
       designId,
       userId,
@@ -63,11 +64,8 @@ export class VersionController {
   async listVersions(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const versions = await this.versionControlService.listVersions(
       designId,
       userId,
@@ -88,11 +86,8 @@ export class VersionController {
   async getVersion(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('versionNumber', ParseIntPipe) versionNumber: number,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     // Get all versions and find the specific one
     const versions = await this.versionControlService.listVersions(
       designId,
@@ -121,11 +116,8 @@ export class VersionController {
   async restoreVersion(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('versionNumber', ParseIntPipe) versionNumber: number,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const design = await this.versionControlService.restoreVersion(
       designId,
       versionNumber,

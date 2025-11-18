@@ -10,17 +10,21 @@ import {
   HttpCode,
   HttpStatus,
   Redirect,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
+import { UserId, CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import { ExportService } from '../services/export.service';
 import { ExportRequestDto } from '../dto/export-request.dto';
 
 /**
  * Export Controller
  * Handles design export operations
- *
- * TODO: Add authentication guards (@UseGuards(AuthGuard))
- * TODO: Add user context decorator (@CurrentUser())
  */
+@ApiTags('Exports')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('api')
 export class ExportController {
   constructor(private readonly exportService: ExportService) {}
@@ -34,14 +38,13 @@ export class ExportController {
   async createExport(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Body(ValidationPipe) exportDto: ExportRequestDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
+    @CurrentUser() user: any,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const exportRecord = await this.exportService.createExport(
       designId,
       userId,
+      user,
       exportDto,
     );
 
@@ -58,11 +61,8 @@ export class ExportController {
   @Get('exports/:exportId')
   async getExportStatus(
     @Param('exportId', ParseUUIDPipe) exportId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const exportRecord = await this.exportService.getExportStatus(
       exportId,
       userId,
@@ -81,11 +81,8 @@ export class ExportController {
   @Get('exports/:exportId/download')
   async downloadExport(
     @Param('exportId', ParseUUIDPipe) exportId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const exportRecord = await this.exportService.getExportStatus(
       exportId,
       userId,
@@ -118,11 +115,8 @@ export class ExportController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteExport(
     @Param('exportId', ParseUUIDPipe) exportId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     await this.exportService.deleteExport(exportId, userId);
   }
 
@@ -133,11 +127,8 @@ export class ExportController {
   @Get('designs/:designId/exports')
   async listExports(
     @Param('designId', ParseUUIDPipe) designId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const exports = await this.exportService.listExports(designId, userId);
 
     return {
@@ -153,11 +144,8 @@ export class ExportController {
   @Post('exports/:exportId/cancel')
   async cancelExport(
     @Param('exportId', ParseUUIDPipe) exportId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     await this.exportService.cancelExport(exportId, userId);
 
     return {

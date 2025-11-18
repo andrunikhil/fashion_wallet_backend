@@ -204,6 +204,116 @@ export class AvatarService {
   }
 
   /**
+   * Create avatar from manual measurements
+   */
+  async createFromMeasurements(
+    userId: string,
+    dto: any, // TODO: Import proper type
+  ): Promise<CreateAvatarResponse> {
+    this.logger.log(`Creating avatar from measurements for user ${userId}`);
+
+    try {
+      // 1. Validate measurements
+      const validationResult = await this.validateMeasurements(dto.measurements);
+      if (!validationResult.valid) {
+        throw new BadRequestException(`Invalid measurements: ${validationResult.errors.map(e => e.message).join(', ')}`);
+      }
+
+      // 2. Create avatar record
+      const avatar = await this.avatarRepo.create({
+        userId,
+        name: dto.name,
+        status: AvatarStatus.PENDING,
+        source: AvatarSource.MANUAL,
+        gender: dto.gender || 'unisex',
+        customization: dto.customization || null,
+        processingProgress: 0,
+        metadata: {
+          version: '1.0',
+          unit: dto.unit || 'metric',
+          createdFromMeasurements: true,
+        },
+      });
+
+      this.logger.log(`Created avatar record: ${avatar.id}`);
+
+      // 3. Create measurements record
+      await this.measurementRepo.create({
+        avatarId: avatar.id,
+        ...dto.measurements,
+        unit: dto.unit || 'metric',
+        source: 'manual' as any,
+        confidenceScore: 1.0, // Manual measurements have 100% confidence
+      });
+
+      this.logger.log(`Created measurements for avatar ${avatar.id}`);
+
+      // 4. Queue model generation job
+      const job = await this.queueService.addProcessingJob(
+        {
+          avatarId: avatar.id,
+          userId,
+          measurements: dto.measurements,
+          unit: dto.unit || 'metric',
+          customization: dto.customization,
+          source: 'manual',
+        },
+        5, // Normal priority
+      );
+
+      this.logger.log(`Queued model generation job ${job.id} for avatar ${avatar.id}`);
+
+      // 5. Update avatar status to processing
+      await this.avatarRepo.update(avatar.id, {
+        status: AvatarStatus.PROCESSING,
+        processingProgress: 0,
+        processingMessage: 'Queued for model generation',
+      });
+
+      // 6. Emit event
+      this.eventEmitter.emit('avatar.created', {
+        avatarId: avatar.id,
+        userId,
+        jobId: job.id,
+        source: 'manual',
+        timestamp: new Date(),
+      });
+
+      return {
+        avatarId: avatar.id,
+        status: 'processing',
+        estimatedCompletionTime: 30, // Faster than photo-based
+        processingJobId: job.id as string,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to create avatar from measurements for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate measurements (basic validation)
+   */
+  private async validateMeasurements(measurements: any) {
+    const errors: any[] = [];
+
+    // Height is required
+    if (!measurements.height) {
+      errors.push({ field: 'height', message: 'Height is required' });
+    }
+
+    // Basic range validation
+    if (measurements.height && (measurements.height < 120 || measurements.height > 250)) {
+      errors.push({ field: 'height', message: 'Height must be between 120 and 250 cm' });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  /**
    * Get avatar by ID with ownership check
    */
   async getAvatar(id: string, userId: string): Promise<Avatar> {
@@ -447,6 +557,70 @@ export class AvatarService {
       avatarId: id,
       status: 'processing',
       estimatedCompletionTime: 60,
+      processingJobId: job.id as string,
+    };
+  }
+
+  /**
+   * Regenerate 3D model for an avatar
+   */
+  async regenerateModel(id: string, userId: string): Promise<CreateAvatarResponse> {
+    const avatar = await this.getAvatar(id, userId);
+
+    // Check if avatar can be regenerated
+    if (avatar.status === AvatarStatus.PROCESSING) {
+      throw new BadRequestException('Avatar is already being processed');
+    }
+
+    // Get measurements
+    const measurements = await this.measurementRepo.findByAvatarId(id);
+    if (!measurements) {
+      throw new BadRequestException('Avatar has no measurements. Cannot regenerate model.');
+    }
+
+    // Queue regeneration job
+    const job = await this.queueService.addProcessingJob(
+      {
+        avatarId: id,
+        userId,
+        measurements: {
+          height: measurements.height,
+          weight: measurements.weight,
+          shoulderWidth: measurements.shoulderWidth,
+          chestCircumference: measurements.chestCircumference,
+          waistCircumference: measurements.waistCircumference,
+          hipCircumference: measurements.hipCircumference,
+          armLength: measurements.armLength,
+          inseamLength: measurements.inseamLength,
+        },
+        unit: measurements.unit,
+        customization: avatar.customization,
+        source: 'regeneration',
+      },
+      8, // Higher priority for regeneration
+    );
+
+    // Update avatar status
+    await this.avatarRepo.update(id, {
+      status: AvatarStatus.PROCESSING,
+      processingProgress: 0,
+      processingMessage: 'Regenerating 3D model',
+      errorMessage: null,
+    });
+
+    this.eventEmitter.emit('avatar.model.regenerate', {
+      avatarId: id,
+      userId,
+      jobId: job.id,
+      timestamp: new Date(),
+    });
+
+    this.logger.log(`Model regeneration initiated for avatar ${id}`);
+
+    return {
+      avatarId: id,
+      status: 'processing',
+      estimatedCompletionTime: 30,
       processingJobId: job.id as string,
     };
   }
