@@ -27,6 +27,7 @@ import {
   CreateAvatarFromPhotosDto,
   PhotoFiles,
 } from '../dto/create-avatar-from-photos.dto';
+import { CreateAvatarFromMeasurementsDto } from '../dto/create-avatar-from-measurements.dto';
 import { UpdateAvatarDto } from '../dto/update-avatar.dto';
 import { ListAvatarsQueryDto } from '../dto/list-avatars-query.dto';
 
@@ -64,6 +65,26 @@ export class AvatarController {
     this.logger.log(`Creating avatar from photos for user ${userId}`);
 
     const result = await this.avatarService.createFromPhotos(userId, files, dto);
+    return this.avatarSerializer.transformToCreateResponse(result);
+  }
+
+  @Post('measurement-based')
+  @ApiOperation({
+    summary: 'Create avatar from measurements',
+    description: 'Create a 3D avatar from manually entered body measurements'
+  })
+  @ApiResponse({ status: 201, description: 'Avatar creation initiated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid measurements' })
+  async createFromMeasurements(
+    @Body() dto: CreateAvatarFromMeasurementsDto,
+    // @CurrentUser() user: User, // TODO: Add when auth is ready
+  ) {
+    // Temporary: Use hardcoded userId until auth is implemented
+    const userId = '00000000-0000-0000-0000-000000000000';
+
+    this.logger.log(`Creating avatar from measurements for user ${userId}`);
+
+    const result = await this.avatarService.createFromMeasurements(userId, dto);
     return this.avatarSerializer.transformToCreateResponse(result);
   }
 
@@ -162,6 +183,13 @@ export class AvatarController {
   }
 
   @Post(':id/retry')
+  @ApiOperation({
+    summary: 'Retry avatar processing',
+    description: 'Retry processing for a failed avatar'
+  })
+  @ApiParam({ name: 'id', description: 'Avatar ID' })
+  @ApiResponse({ status: 200, description: 'Processing restarted successfully' })
+  @ApiResponse({ status: 400, description: 'Can only retry failed avatars' })
   async retryProcessing(
     @Param('id', ParseUUIDPipe) id: string,
     // @CurrentUser() user: User, // TODO: Add when auth is ready
@@ -173,7 +201,34 @@ export class AvatarController {
     return this.avatarSerializer.transformToCreateResponse(result);
   }
 
+  @Post(':id/regenerate-model')
+  @ApiOperation({
+    summary: 'Regenerate 3D model',
+    description: 'Regenerate the 3D model for an avatar based on current measurements. Useful after updating measurements.'
+  })
+  @ApiParam({ name: 'id', description: 'Avatar ID' })
+  @ApiResponse({ status: 200, description: 'Model regeneration initiated successfully' })
+  @ApiResponse({ status: 400, description: 'Avatar is already processing or has no measurements' })
+  @ApiResponse({ status: 404, description: 'Avatar not found' })
+  async regenerateModel(
+    @Param('id', ParseUUIDPipe) id: string,
+    // @CurrentUser() user: User, // TODO: Add when auth is ready
+  ) {
+    // Temporary: Use hardcoded userId until auth is implemented
+    const userId = '00000000-0000-0000-0000-000000000000';
+
+    this.logger.log(`Regenerating model for avatar ${id}`);
+
+    const result = await this.avatarService.regenerateModel(id, userId);
+    return this.avatarSerializer.transformToCreateResponse(result);
+  }
+
   @Get('stats/me')
+  @ApiOperation({
+    summary: 'Get user avatar statistics',
+    description: 'Retrieve statistics about avatars for the current user'
+  })
+  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
   async getUserStats(
     // @CurrentUser() user: User, // TODO: Add when auth is ready
   ) {
