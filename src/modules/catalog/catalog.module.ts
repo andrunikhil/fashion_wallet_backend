@@ -36,6 +36,7 @@ import { CollectionController } from './controllers/collection.controller';
 import { BrandPartnerController } from './controllers/brand-partner.controller';
 import { SearchController } from './controllers/search.controller';
 import { RecommendationController } from './controllers/recommendation.controller';
+import { MetricsController } from './controllers/metrics.controller';
 
 // Services
 import { CatalogService } from './services/catalog.service';
@@ -48,6 +49,12 @@ import { CatalogReindexService } from './services/catalog-reindex.service';
 import { RecommendationService } from './services/recommendation.service';
 import { UserInteractionService } from './services/user-interaction.service';
 
+// Phase 5: Performance & Monitoring Services
+import { CatalogCacheService } from './services/catalog-cache.service';
+import { CacheWarmingService } from './services/cache-warming.service';
+import { MaterializedViewsService } from './services/materialized-views.service';
+import { CatalogMetricsService } from './services/metrics.service';
+
 // Gateways
 import { CatalogGateway } from './gateways/catalog.gateway';
 
@@ -55,6 +62,10 @@ import { CatalogGateway } from './gateways/catalog.gateway';
 import { CatalogResolver } from './resolvers/catalog.resolver';
 import { SearchResolver } from './resolvers/search.resolver';
 import { RecommendationResolver } from './resolvers/recommendation.resolver';
+
+// Interceptors
+import { PerformanceMonitoringInterceptor } from './interceptors/performance-monitoring.interceptor';
+import { LoggingInterceptor } from './interceptors/logging.interceptor';
 
 // Configurations
 import {
@@ -94,6 +105,7 @@ import {
     BrandPartnerController,
     SearchController,
     RecommendationController,
+    MetricsController,
   ],
   providers: [
     // Services
@@ -106,6 +118,11 @@ import {
     CatalogReindexService,
     RecommendationService,
     UserInteractionService,
+    // Phase 5: Performance & Monitoring Services
+    CatalogCacheService,
+    CacheWarmingService,
+    MaterializedViewsService,
+    CatalogMetricsService,
     // Repositories
     CatalogItemRepository,
     BrandPartnerRepository,
@@ -119,6 +136,9 @@ import {
     CatalogResolver,
     SearchResolver,
     RecommendationResolver,
+    // Interceptors
+    PerformanceMonitoringInterceptor,
+    LoggingInterceptor,
   ],
   exports: [
     CatalogService,
@@ -130,6 +150,11 @@ import {
     CatalogReindexService,
     RecommendationService,
     UserInteractionService,
+    // Phase 5 Services
+    CatalogCacheService,
+    CacheWarmingService,
+    MaterializedViewsService,
+    CatalogMetricsService,
     CatalogItemRepository,
     BrandPartnerRepository,
     CollectionRepository,
