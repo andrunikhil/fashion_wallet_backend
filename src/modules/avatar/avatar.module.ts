@@ -12,10 +12,12 @@ import { QueueModule } from '../queue/queue.module';
 // Controllers
 import { AvatarController } from './controllers/avatar.controller';
 import { AvatarModelController } from './controllers/avatar-model.controller';
+import { MeasurementController } from './controllers/measurement.controller';
 import { HealthController } from './controllers/health.controller';
 
 // Services
 import { AvatarService } from './services/avatar.service';
+import { MeasurementService } from './services/measurement.service';
 import { StorageService } from './services/storage.service';
 import { PhotoValidationService } from './services/photo-validation.service';
 import { MLService } from './services/ml/ml.service';
@@ -43,6 +45,10 @@ import { AvatarGateway } from './gateways/avatar.gateway';
 // Subscribers
 import { AvatarEventSubscriber } from './subscribers/avatar-event.subscriber';
 
+// Serializers
+import { AvatarSerializer } from './serializers/avatar.serializer';
+import { MeasurementSerializer } from './serializers/measurement.serializer';
+
 // Entities
 import { Avatar } from '../../infrastructure/database/entities/avatar.entity';
 import { Measurement } from '../../infrastructure/database/entities/measurement.entity';
@@ -68,11 +74,13 @@ import { ProcessingJob } from '../../infrastructure/database/entities/processing
   controllers: [
     AvatarController,
     AvatarModelController,
+    MeasurementController,
     HealthController,
   ],
   providers: [
     // Core Services
     AvatarService,
+    MeasurementService,
     StorageService,
     PhotoValidationService,
 
@@ -116,6 +124,10 @@ import { ProcessingJob } from '../../infrastructure/database/entities/processing
 
     // Subscribers
     AvatarEventSubscriber,
+
+    // Serializers
+    AvatarSerializer,
+    MeasurementSerializer,
   ],
   exports: [
     AvatarService,
