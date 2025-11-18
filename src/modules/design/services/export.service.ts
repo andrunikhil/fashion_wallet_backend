@@ -10,6 +10,8 @@ import { Queue } from 'bull';
 import { Export } from '../entities/export.entity';
 import { ExportRepository } from '../repositories/export.repository';
 import { DesignRepository } from '../repositories/design.repository';
+import { CollaboratorRepository } from '../repositories/collaborator.repository';
+import { TierLimitsService } from './tier-limits.service';
 import { ExportRequestDto } from '../dto/export-request.dto';
 
 /**
@@ -32,6 +34,8 @@ export class ExportService {
     private readonly exportQueue: Queue,
     private readonly exportRepo: ExportRepository,
     private readonly designRepo: DesignRepository,
+    private readonly collaboratorRepo: CollaboratorRepository,
+    private readonly tierLimitsService: TierLimitsService,
   ) {}
 
   /**
@@ -40,12 +44,15 @@ export class ExportService {
   async createExport(
     designId: string,
     userId: string,
+    user: any,
     exportDto: ExportRequestDto,
   ): Promise<Export> {
     // Verify design exists and user has access
     await this.verifyDesignAccess(designId, userId);
 
-    // TODO: Check tier-based export limits (free tier may have restrictions)
+    // Check tier-based export limits
+    const userTier = this.tierLimitsService.getUserTier(user);
+    await this.tierLimitsService.validateExportCreation(userId, userTier, exportDto.type);
 
     // Determine format based on type
     const format = this.determineFormat(exportDto.type, exportDto.options);
@@ -370,7 +377,18 @@ export class ExportService {
       return;
     }
 
-    // TODO: Check collaborators table for shared designs
+    // Check collaborators table for shared designs
+    if (design.visibility === 'shared') {
+      const hasAccess = await this.collaboratorRepo.hasAccess(
+        designId,
+        userId,
+        'viewer', // Exporting requires at least viewer access
+      );
+
+      if (hasAccess) {
+        return;
+      }
+    }
 
     throw new ForbiddenException('You do not have access to this design');
   }

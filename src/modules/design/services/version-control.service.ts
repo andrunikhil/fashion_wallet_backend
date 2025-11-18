@@ -13,6 +13,7 @@ import { DesignRepository } from '../repositories/design.repository';
 import { LayerRepository } from '../repositories/layer.repository';
 import { CanvasSettingsRepository } from '../repositories/canvas-settings.repository';
 import { SnapshotRepository } from '../repositories/snapshot.repository';
+import { CollaboratorRepository } from '../repositories/collaborator.repository';
 import { DesignCacheService } from './cache.service';
 
 export interface VersionDiff {
@@ -37,6 +38,7 @@ export class VersionControlService {
     private readonly layerRepo: LayerRepository,
     private readonly canvasSettingsRepo: CanvasSettingsRepository,
     private readonly snapshotRepo: SnapshotRepository,
+    private readonly collaboratorRepo: CollaboratorRepository,
     private readonly cacheService: DesignCacheService,
   ) {}
 
@@ -559,7 +561,18 @@ export class VersionControlService {
       return;
     }
 
-    // TODO: Check collaborators table for shared designs
+    // Check collaborators table for shared designs
+    if (design.visibility === 'shared') {
+      const hasAccess = await this.collaboratorRepo.hasAccess(
+        designId,
+        userId,
+        requiredRole,
+      );
+
+      if (hasAccess) {
+        return;
+      }
+    }
 
     throw new ForbiddenException('You do not have access to this design');
   }

@@ -8,18 +8,20 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
+import { UserId } from '../../../shared/decorators/current-user.decorator';
 import { RenderingService } from '../services/rendering.service';
 
 /**
  * Rendering Controller
  * Manages design rendering requests and render cache
- *
- * TODO: Add authentication guards (@UseGuards(AuthGuard))
- * TODO: Add user context decorator (@CurrentUser())
  */
 @ApiTags('Design Rendering')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('designs/:designId/render')
 export class RenderingController {
   constructor(private readonly renderingService: RenderingService) {}

@@ -8,9 +8,11 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger, UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { WsJwtAuthGuard } from '../../../shared/guards/ws-jwt-auth.guard';
 import { CollaborationService } from '../services/collaboration.service';
+import { DesignRepository } from '../repositories/design.repository';
+import { CollaboratorRepository } from '../repositories/collaborator.repository';
 
 /**
  * WebSocket Gateway for Design Service
@@ -38,6 +40,8 @@ export class DesignGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly collaborationService: CollaborationService,
+    private readonly designRepo: DesignRepository,
+    private readonly collaboratorRepo: CollaboratorRepository,
   ) {}
 
   /**
@@ -97,7 +101,7 @@ export class DesignGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(`User ${userId} joining design ${designId}`);
 
       // Verify user has access to the design
-      // TODO: Add proper access control check
+      await this.verifyDesignAccess(designId, userId);
 
       // Leave previous design room if any
       if (client.data.designId) {
@@ -442,6 +446,45 @@ export class DesignGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Don't log cursor errors (too noisy)
       return { success: false };
     }
+  }
+
+  /**
+   * Verify user has access to design
+   */
+  private async verifyDesignAccess(
+    designId: string,
+    userId: string,
+  ): Promise<void> {
+    const design = await this.designRepo.findById(designId);
+
+    if (!design) {
+      throw new NotFoundException(`Design with ID ${designId} not found`);
+    }
+
+    // Owner always has full access
+    if (design.userId === userId) {
+      return;
+    }
+
+    // Check if design is public (allow viewing)
+    if (design.visibility === 'public') {
+      return;
+    }
+
+    // Check collaborators table for shared designs
+    if (design.visibility === 'shared') {
+      const hasAccess = await this.collaboratorRepo.hasAccess(
+        designId,
+        userId,
+        'viewer', // WebSocket access requires at least viewer role
+      );
+
+      if (hasAccess) {
+        return;
+      }
+    }
+
+    throw new ForbiddenException('You do not have access to this design');
   }
 
 }

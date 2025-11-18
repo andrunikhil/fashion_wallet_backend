@@ -34,6 +34,7 @@ import { VersionRepository } from './repositories/version.repository';
 import { ExportRepository } from './repositories/export.repository';
 import { CanvasSettingsRepository } from './repositories/canvas-settings.repository';
 import { SnapshotRepository } from './repositories/snapshot.repository';
+import { CollaboratorRepository } from './repositories/collaborator.repository';
 
 // Services
 import { DesignService } from './services/design.service';
@@ -44,6 +45,8 @@ import { ExportService } from './services/export.service';
 import { DesignCacheService } from './services/cache.service';
 import { CollaborationService } from './services/collaboration.service';
 import { RenderingService } from './services/rendering.service';
+import { TierLimitsService } from './services/tier-limits.service';
+import { StorageService } from './services/storage.service';
 
 // Controllers
 import { DesignController } from './controllers/design.controller';
@@ -108,6 +111,8 @@ import { ExportWorker } from './workers/export.worker';
     DesignCacheService,
     CollaborationService,
     RenderingService,
+    TierLimitsService,
+    StorageService,
 
     // Gateways
     DesignGateway,
@@ -123,6 +128,7 @@ import { ExportWorker } from './workers/export.worker';
     ExportRepository,
     CanvasSettingsRepository,
     SnapshotRepository,
+    CollaboratorRepository,
 
     // Redis client
     {

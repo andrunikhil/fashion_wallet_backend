@@ -6,7 +6,9 @@ import { DesignRepository } from '../repositories/design.repository';
 import { LayerRepository } from '../repositories/layer.repository';
 import { VersionRepository } from '../repositories/version.repository';
 import { CanvasSettingsRepository } from '../repositories/canvas-settings.repository';
+import { CollaboratorRepository } from '../repositories/collaborator.repository';
 import { DesignCacheService } from './cache.service';
+import { TierLimitsService } from './tier-limits.service';
 import { CreateDesignDto } from '../dto/create-design.dto';
 import { UpdateDesignDto } from '../dto/update-design.dto';
 import { QueryDesignsDto } from '../dto/query-designs.dto';
@@ -20,7 +22,9 @@ export class DesignService {
     private readonly layerRepo: LayerRepository,
     private readonly versionRepo: VersionRepository,
     private readonly canvasSettingsRepo: CanvasSettingsRepository,
+    private readonly collaboratorRepo: CollaboratorRepository,
     private readonly cacheService: DesignCacheService,
+    private readonly tierLimitsService: TierLimitsService,
   ) {}
 
   /**
@@ -28,9 +32,13 @@ export class DesignService {
    */
   async createDesign(
     userId: string,
+    user: any,
     createDto: CreateDesignDto,
   ): Promise<Design> {
-    // TODO: Validate user permissions and tier limits
+    // Validate user permissions and tier limits
+    const userTier = this.tierLimitsService.getUserTier(user);
+    await this.tierLimitsService.validateDesignCreation(userId, userTier);
+
     // TODO: Validate avatar existence if avatarId provided
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -199,7 +207,8 @@ export class DesignService {
       throw new NotFoundException(`Design with ID ${designId} not found`);
     }
 
-    // TODO: Validate design completeness before publishing
+    // Validate design completeness before publishing
+    await this.validateDesignCompleteness(designId, design);
 
     const updated = await this.designRepo.update(designId, {
       status: 'published',
@@ -393,6 +402,56 @@ export class DesignService {
   }
 
   /**
+   * Validate design has minimum requirements for publishing
+   */
+  private async validateDesignCompleteness(
+    designId: string,
+    design: Design,
+  ): Promise<void> {
+    // Check basic metadata
+    if (!design.name || design.name.trim().length === 0) {
+      throw new BadRequestException(
+        'Design must have a name before publishing',
+      );
+    }
+
+    // Check if design has at least one layer
+    const layers = await this.layerRepo.findByDesignId(designId);
+    if (layers.length === 0) {
+      throw new BadRequestException(
+        'Design must have at least one layer before publishing',
+      );
+    }
+
+    // Check if design has a valid avatar reference
+    if (!design.avatarId) {
+      throw new BadRequestException(
+        'Design must have an avatar assigned before publishing',
+      );
+    }
+
+    // Validate design has required metadata
+    if (!design.category) {
+      throw new BadRequestException(
+        'Design must have a category before publishing',
+      );
+    }
+
+    // Check if design has tags (optional but recommended)
+    if (!design.tags || design.tags.length === 0) {
+      // This is just a warning, not blocking
+      // Could log a warning or send to analytics
+    }
+
+    // Ensure visibility is set appropriately
+    if (design.visibility === 'private') {
+      throw new BadRequestException(
+        'Cannot publish a private design. Change visibility to "public" or "shared" first',
+      );
+    }
+  }
+
+  /**
    * Verify user has access to design
    */
   private async verifyAccess(
@@ -416,7 +475,18 @@ export class DesignService {
       return;
     }
 
-    // TODO: Check collaborators table for shared designs
+    // Check collaborators table for shared designs
+    if (design.visibility === 'shared') {
+      const hasAccess = await this.collaboratorRepo.hasAccess(
+        designId,
+        userId,
+        requiredRole,
+      );
+
+      if (hasAccess) {
+        return;
+      }
+    }
 
     throw new ForbiddenException('You do not have access to this design');
   }

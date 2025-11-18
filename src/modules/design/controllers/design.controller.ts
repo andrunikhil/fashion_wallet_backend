@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
-import { UserId } from '../../../shared/decorators/current-user.decorator';
+import { UserId, CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import { DesignService } from '../services/design.service';
 import { CreateDesignDto } from '../dto/create-design.dto';
 import { UpdateDesignDto } from '../dto/update-design.dto';
@@ -44,11 +44,9 @@ export class DesignController {
   async createDesign(
     @Body(ValidationPipe) createDto: CreateDesignDto,
     @UserId() userId: string,
+    @CurrentUser() user: any,
   ) {
-
-
-
-    const design = await this.designService.createDesign(userId, createDto);
+    const design = await this.designService.createDesign(userId, user, createDto);
 
     return {
       success: true,
