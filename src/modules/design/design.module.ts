@@ -46,6 +46,7 @@ import { DesignCacheService } from './services/cache.service';
 import { CollaborationService } from './services/collaboration.service';
 import { RenderingService } from './services/rendering.service';
 import { TierLimitsService } from './services/tier-limits.service';
+import { StorageService } from './services/storage.service';
 
 // Controllers
 import { DesignController } from './controllers/design.controller';
@@ -111,6 +112,7 @@ import { ExportWorker } from './workers/export.worker';
     CollaborationService,
     RenderingService,
     TierLimitsService,
+    StorageService,
 
     // Gateways
     DesignGateway,
