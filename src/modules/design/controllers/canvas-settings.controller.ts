@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
 import { UserId } from '../../../shared/decorators/current-user.decorator';
 import { CanvasSettingsRepository } from '../repositories/canvas-settings.repository';
 import { DesignRepository } from '../repositories/design.repository';
+import { CollaboratorRepository } from '../repositories/collaborator.repository';
 import { DesignCacheService } from '../services/cache.service';
 import {
   CameraSettings,
@@ -54,6 +55,7 @@ export class CanvasSettingsController {
   constructor(
     private readonly canvasSettingsRepo: CanvasSettingsRepository,
     private readonly designRepo: DesignRepository,
+    private readonly collaboratorRepo: CollaboratorRepository,
     private readonly cacheService: DesignCacheService,
   ) {}
 
@@ -180,7 +182,18 @@ export class CanvasSettingsController {
       return;
     }
 
-    // TODO: Check collaborators table for shared designs
+    // Check collaborators table for shared designs
+    if (design.visibility === 'shared') {
+      const hasAccess = await this.collaboratorRepo.hasAccess(
+        designId,
+        userId,
+        requiredRole,
+      );
+
+      if (hasAccess) {
+        return;
+      }
+    }
 
     throw new ForbiddenException('You do not have access to this design');
   }

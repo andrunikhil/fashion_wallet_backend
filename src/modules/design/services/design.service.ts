@@ -207,7 +207,8 @@ export class DesignService {
       throw new NotFoundException(`Design with ID ${designId} not found`);
     }
 
-    // TODO: Validate design completeness before publishing
+    // Validate design completeness before publishing
+    await this.validateDesignCompleteness(designId, design);
 
     const updated = await this.designRepo.update(designId, {
       status: 'published',
@@ -398,6 +399,56 @@ export class DesignService {
     const [designs, total] = await this.designRepo.getPublishedDesigns(limit, offset);
 
     return { designs, total };
+  }
+
+  /**
+   * Validate design has minimum requirements for publishing
+   */
+  private async validateDesignCompleteness(
+    designId: string,
+    design: Design,
+  ): Promise<void> {
+    // Check basic metadata
+    if (!design.name || design.name.trim().length === 0) {
+      throw new BadRequestException(
+        'Design must have a name before publishing',
+      );
+    }
+
+    // Check if design has at least one layer
+    const layers = await this.layerRepo.findByDesignId(designId);
+    if (layers.length === 0) {
+      throw new BadRequestException(
+        'Design must have at least one layer before publishing',
+      );
+    }
+
+    // Check if design has a valid avatar reference
+    if (!design.avatarId) {
+      throw new BadRequestException(
+        'Design must have an avatar assigned before publishing',
+      );
+    }
+
+    // Validate design has required metadata
+    if (!design.category) {
+      throw new BadRequestException(
+        'Design must have a category before publishing',
+      );
+    }
+
+    // Check if design has tags (optional but recommended)
+    if (!design.tags || design.tags.length === 0) {
+      // This is just a warning, not blocking
+      // Could log a warning or send to analytics
+    }
+
+    // Ensure visibility is set appropriately
+    if (design.visibility === 'private') {
+      throw new BadRequestException(
+        'Cannot publish a private design. Change visibility to "public" or "shared" first',
+      );
+    }
   }
 
   /**
