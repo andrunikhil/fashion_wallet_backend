@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
-import { UserId } from '../../../shared/decorators/current-user.decorator';
+import { UserId, CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import { ExportService } from '../services/export.service';
 import { ExportRequestDto } from '../dto/export-request.dto';
 
@@ -39,10 +39,12 @@ export class ExportController {
     @Param('designId', ParseUUIDPipe) designId: string,
     @Body(ValidationPipe) exportDto: ExportRequestDto,
     @UserId() userId: string,
+    @CurrentUser() user: any,
   ) {
     const exportRecord = await this.exportService.createExport(
       designId,
       userId,
+      user,
       exportDto,
     );
 

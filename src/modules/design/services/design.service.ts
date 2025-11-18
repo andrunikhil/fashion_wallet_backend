@@ -8,6 +8,7 @@ import { VersionRepository } from '../repositories/version.repository';
 import { CanvasSettingsRepository } from '../repositories/canvas-settings.repository';
 import { CollaboratorRepository } from '../repositories/collaborator.repository';
 import { DesignCacheService } from './cache.service';
+import { TierLimitsService } from './tier-limits.service';
 import { CreateDesignDto } from '../dto/create-design.dto';
 import { UpdateDesignDto } from '../dto/update-design.dto';
 import { QueryDesignsDto } from '../dto/query-designs.dto';
@@ -23,6 +24,7 @@ export class DesignService {
     private readonly canvasSettingsRepo: CanvasSettingsRepository,
     private readonly collaboratorRepo: CollaboratorRepository,
     private readonly cacheService: DesignCacheService,
+    private readonly tierLimitsService: TierLimitsService,
   ) {}
 
   /**
@@ -30,9 +32,13 @@ export class DesignService {
    */
   async createDesign(
     userId: string,
+    user: any,
     createDto: CreateDesignDto,
   ): Promise<Design> {
-    // TODO: Validate user permissions and tier limits
+    // Validate user permissions and tier limits
+    const userTier = this.tierLimitsService.getUserTier(user);
+    await this.tierLimitsService.validateDesignCreation(userId, userTier);
+
     // TODO: Validate avatar existence if avatarId provided
 
     const queryRunner = this.dataSource.createQueryRunner();

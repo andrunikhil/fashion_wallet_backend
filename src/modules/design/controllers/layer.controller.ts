@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
-import { UserId } from '../../../shared/decorators/current-user.decorator';
+import { UserId, CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import { LayerService } from '../services/layer.service';
 import { CreateLayerDto } from '../dto/create-layer.dto';
 import { UpdateLayerDto } from '../dto/update-layer.dto';
@@ -44,8 +44,9 @@ export class LayerController {
     @Param('designId', ParseUUIDPipe) designId: string,
     @Body(ValidationPipe) createDto: CreateLayerDto,
     @UserId() userId: string,
+    @CurrentUser() user: any,
   ) {
-    const layer = await this.layerService.addLayer(designId, userId, createDto);
+    const layer = await this.layerService.addLayer(designId, userId, user, createDto);
 
     return {
       success: true,
