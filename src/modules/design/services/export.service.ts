@@ -10,6 +10,7 @@ import { Queue } from 'bull';
 import { Export } from '../entities/export.entity';
 import { ExportRepository } from '../repositories/export.repository';
 import { DesignRepository } from '../repositories/design.repository';
+import { CollaboratorRepository } from '../repositories/collaborator.repository';
 import { ExportRequestDto } from '../dto/export-request.dto';
 
 /**
@@ -32,6 +33,7 @@ export class ExportService {
     private readonly exportQueue: Queue,
     private readonly exportRepo: ExportRepository,
     private readonly designRepo: DesignRepository,
+    private readonly collaboratorRepo: CollaboratorRepository,
   ) {}
 
   /**
@@ -370,7 +372,18 @@ export class ExportService {
       return;
     }
 
-    // TODO: Check collaborators table for shared designs
+    // Check collaborators table for shared designs
+    if (design.visibility === 'shared') {
+      const hasAccess = await this.collaboratorRepo.hasAccess(
+        designId,
+        userId,
+        'viewer', // Exporting requires at least viewer access
+      );
+
+      if (hasAccess) {
+        return;
+      }
+    }
 
     throw new ForbiddenException('You do not have access to this design');
   }

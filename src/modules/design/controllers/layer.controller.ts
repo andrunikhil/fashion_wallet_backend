@@ -11,7 +11,11 @@ import {
   ValidationPipe,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
+import { UserId } from '../../../shared/decorators/current-user.decorator';
 import { LayerService } from '../services/layer.service';
 import { CreateLayerDto } from '../dto/create-layer.dto';
 import { UpdateLayerDto } from '../dto/update-layer.dto';
@@ -22,10 +26,10 @@ import { ReorderLayersDto } from '../dto/reorder-layers.dto';
  * Handles layer management within designs
  *
  * All routes are nested under /api/designs/:designId/layers
- *
- * TODO: Add authentication guards (@UseGuards(AuthGuard))
- * TODO: Add user context decorator (@CurrentUser())
  */
+@ApiTags('Layers')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('api/designs/:designId/layers')
 export class LayerController {
   constructor(private readonly layerService: LayerService) {}
@@ -39,11 +43,8 @@ export class LayerController {
   async addLayer(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Body(ValidationPipe) createDto: CreateLayerDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layer = await this.layerService.addLayer(designId, userId, createDto);
 
     return {
@@ -59,11 +60,8 @@ export class LayerController {
   @Get()
   async getLayers(
     @Param('designId', ParseUUIDPipe) designId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layers = await this.layerService.getLayersByDesignId(
       designId,
       userId,
@@ -83,11 +81,8 @@ export class LayerController {
   async getLayer(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('layerId', ParseUUIDPipe) layerId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     // Get all layers and find the specific one
     const layers = await this.layerService.getLayersByDesignId(
       designId,
@@ -117,11 +112,8 @@ export class LayerController {
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('layerId', ParseUUIDPipe) layerId: string,
     @Body(ValidationPipe) updateDto: UpdateLayerDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layer = await this.layerService.updateLayer(
       layerId,
       userId,
@@ -143,11 +135,8 @@ export class LayerController {
   async deleteLayer(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('layerId', ParseUUIDPipe) layerId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     await this.layerService.deleteLayer(layerId, userId);
   }
 
@@ -159,11 +148,8 @@ export class LayerController {
   async duplicateLayer(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('layerId', ParseUUIDPipe) layerId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layer = await this.layerService.duplicateLayer(layerId, userId);
 
     return {
@@ -180,11 +166,8 @@ export class LayerController {
   async reorderLayers(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Body(ValidationPipe) reorderDto: ReorderLayersDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layers = await this.layerService.reorderLayers(
       designId,
       userId,
@@ -205,11 +188,8 @@ export class LayerController {
   async moveLayerUp(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('layerId', ParseUUIDPipe) layerId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layers = await this.layerService.moveLayerUp(layerId, userId);
 
     return {
@@ -226,11 +206,8 @@ export class LayerController {
   async moveLayerDown(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('layerId', ParseUUIDPipe) layerId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layers = await this.layerService.moveLayerDown(layerId, userId);
 
     return {
@@ -247,11 +224,8 @@ export class LayerController {
   async moveLayerToTop(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('layerId', ParseUUIDPipe) layerId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layers = await this.layerService.moveLayerToTop(layerId, userId);
 
     return {
@@ -268,11 +242,8 @@ export class LayerController {
   async moveLayerToBottom(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Param('layerId', ParseUUIDPipe) layerId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     const layers = await this.layerService.moveLayerToBottom(layerId, userId);
 
     return {

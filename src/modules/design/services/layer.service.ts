@@ -9,6 +9,7 @@ import { DataSource } from 'typeorm';
 import { Layer } from '../entities/layer.entity';
 import { LayerRepository } from '../repositories/layer.repository';
 import { DesignRepository } from '../repositories/design.repository';
+import { CollaboratorRepository } from '../repositories/collaborator.repository';
 import { DesignCacheService } from './cache.service';
 import { CreateLayerDto } from '../dto/create-layer.dto';
 import { UpdateLayerDto } from '../dto/update-layer.dto';
@@ -39,6 +40,7 @@ export class LayerService {
     private dataSource: DataSource,
     private readonly layerRepo: LayerRepository,
     private readonly designRepo: DesignRepository,
+    private readonly collaboratorRepo: CollaboratorRepository,
     private readonly cacheService: DesignCacheService,
   ) {}
 
@@ -576,7 +578,18 @@ export class LayerService {
       return;
     }
 
-    // TODO: Check collaborators table for shared designs
+    // Check collaborators table for shared designs
+    if (design.visibility === 'shared') {
+      const hasAccess = await this.collaboratorRepo.hasAccess(
+        designId,
+        userId,
+        requiredRole,
+      );
+
+      if (hasAccess) {
+        return;
+      }
+    }
 
     throw new ForbiddenException('You do not have access to this design');
   }

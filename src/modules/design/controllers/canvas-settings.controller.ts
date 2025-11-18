@@ -7,7 +7,11 @@ import {
   ParseUUIDPipe,
   NotFoundException,
   ForbiddenException,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
+import { UserId } from '../../../shared/decorators/current-user.decorator';
 import { CanvasSettingsRepository } from '../repositories/canvas-settings.repository';
 import { DesignRepository } from '../repositories/design.repository';
 import { DesignCacheService } from '../services/cache.service';
@@ -40,10 +44,11 @@ class UpdateCanvasSettingsDto {
  *
  * All routes are nested under /api/designs/:designId/canvas
  *
- * TODO: Add authentication guards (@UseGuards(AuthGuard))
- * TODO: Add user context decorator (@CurrentUser())
  * TODO: Add validation decorators to UpdateCanvasSettingsDto
  */
+@ApiTags('Canvas Settings')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('api/designs/:designId/canvas')
 export class CanvasSettingsController {
   constructor(
@@ -59,11 +64,8 @@ export class CanvasSettingsController {
   @Get()
   async getCanvasSettings(
     @Param('designId', ParseUUIDPipe) designId: string,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     // Verify design access
     await this.verifyDesignAccess(designId, userId);
 
@@ -111,11 +113,8 @@ export class CanvasSettingsController {
   async updateCanvasSettings(
     @Param('designId', ParseUUIDPipe) designId: string,
     @Body() updateDto: UpdateCanvasSettingsDto,
-    // TODO: @CurrentUser() user: User,
+    @UserId() userId: string,
   ) {
-    // TODO: Extract userId from authenticated user
-    const userId = 'temp-user-id'; // Placeholder
-
     // Verify design access (editor role required)
     await this.verifyDesignAccess(designId, userId, 'editor');
 

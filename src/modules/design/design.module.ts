@@ -34,6 +34,7 @@ import { VersionRepository } from './repositories/version.repository';
 import { ExportRepository } from './repositories/export.repository';
 import { CanvasSettingsRepository } from './repositories/canvas-settings.repository';
 import { SnapshotRepository } from './repositories/snapshot.repository';
+import { CollaboratorRepository } from './repositories/collaborator.repository';
 
 // Services
 import { DesignService } from './services/design.service';
@@ -123,6 +124,7 @@ import { ExportWorker } from './workers/export.worker';
     ExportRepository,
     CanvasSettingsRepository,
     SnapshotRepository,
+    CollaboratorRepository,
 
     // Redis client
     {
