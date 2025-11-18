@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -29,19 +30,8 @@ import {
   PaginatedResultDto,
 } from '../dto';
 import { Collection, CollectionItem } from '../entities';
-
-// Placeholder auth decorators (replace when auth module is available)
-const UseJwtAuth = (): MethodDecorator => {
-  return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    // Placeholder - replace with actual auth guard
-  };
-};
-
-const RequireRoles = (...roles: string[]): MethodDecorator => {
-  return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    // Placeholder - replace with actual roles guard
-  };
-};
+import { JwtAuthGuard, RolesGuard } from '../../auth/guards';
+import { Roles } from '../../auth/decorators';
 
 @Controller('catalog/collections')
 @ApiTags('Collections')
@@ -50,8 +40,8 @@ export class CollectionController {
   constructor(private readonly collectionService: CollectionService) {}
 
   @Post()
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Create a new collection (Admin only)' })
   @ApiResponse({
     status: 201,
@@ -118,8 +108,8 @@ export class CollectionController {
   }
 
   @Put(':id')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Update collection (Admin only)' })
   @ApiParam({ name: 'id', description: 'Collection UUID' })
   @ApiResponse({
@@ -140,8 +130,8 @@ export class CollectionController {
   }
 
   @Delete(':id')
-  @UseJwtAuth()
-  @RequireRoles('admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete collection (Admin only)' })
   @ApiParam({ name: 'id', description: 'Collection UUID' })
@@ -156,8 +146,8 @@ export class CollectionController {
   // ===== Collection Item Management =====
 
   @Post(':id/items')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Add item to collection (Admin only)' })
   @ApiParam({ name: 'id', description: 'Collection UUID' })
   @ApiResponse({
@@ -178,8 +168,8 @@ export class CollectionController {
   }
 
   @Delete(':id/items/:itemId')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove item from collection (Admin only)' })
   @ApiParam({ name: 'id', description: 'Collection UUID' })
@@ -196,8 +186,8 @@ export class CollectionController {
   }
 
   @Put(':id/items/reorder')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Reorder items in collection (Admin only)' })
   @ApiParam({ name: 'id', description: 'Collection UUID' })

@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -28,19 +29,8 @@ import {
   PartnershipType,
 } from '../dto';
 import { BrandPartner, CatalogItem } from '../entities';
-
-// Placeholder auth decorators (replace when auth module is available)
-const UseJwtAuth = (): MethodDecorator => {
-  return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    // Placeholder - replace with actual auth guard
-  };
-};
-
-const RequireRoles = (...roles: string[]): MethodDecorator => {
-  return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    // Placeholder - replace with actual roles guard
-  };
-};
+import { JwtAuthGuard, RolesGuard } from '../../auth/guards';
+import { Roles } from '../../auth/decorators';
 
 @Controller('catalog/brand-partners')
 @ApiTags('Brand Partners')
@@ -49,8 +39,8 @@ export class BrandPartnerController {
   constructor(private readonly brandPartnerService: BrandPartnerService) {}
 
   @Post()
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Create a new brand partner (Admin only)' })
   @ApiResponse({
     status: 201,
@@ -108,8 +98,8 @@ export class BrandPartnerController {
   }
 
   @Put(':id')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Update brand partner (Admin only)' })
   @ApiParam({ name: 'id', description: 'Brand partner UUID' })
   @ApiResponse({
@@ -130,8 +120,8 @@ export class BrandPartnerController {
   }
 
   @Delete(':id')
-  @UseJwtAuth()
-  @RequireRoles('admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete brand partner (Admin only)' })
   @ApiParam({ name: 'id', description: 'Brand partner UUID' })

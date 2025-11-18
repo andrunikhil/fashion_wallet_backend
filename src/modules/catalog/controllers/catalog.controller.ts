@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -32,20 +33,8 @@ import {
   CreateElementDto,
 } from '../dto';
 import { CatalogItem } from '../entities';
-
-// Note: Auth guards (JwtAuthGuard, RolesGuard) would be imported from auth module when available
-// For now, we'll define placeholder decorators
-const UseJwtAuth = (): MethodDecorator => {
-  return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    // Placeholder - replace with actual auth guard
-  };
-};
-
-const RequireRoles = (...roles: string[]): MethodDecorator => {
-  return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    // Placeholder - replace with actual roles guard
-  };
-};
+import { JwtAuthGuard, RolesGuard } from '../../auth/guards';
+import { Roles } from '../../auth/decorators';
 
 @Controller('catalog')
 @ApiTags('Catalog')
@@ -58,8 +47,8 @@ export class CatalogController {
   // ===== CRUD Operations =====
 
   @Post('items')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Create a new catalog item (Admin only)' })
   @ApiResponse({
     status: 201,
@@ -104,8 +93,8 @@ export class CatalogController {
   }
 
   @Put('items/:id')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Update catalog item (Admin only)' })
   @ApiParam({ name: 'id', description: 'Catalog item UUID' })
   @ApiResponse({
@@ -125,8 +114,8 @@ export class CatalogController {
   }
 
   @Delete('items/:id')
-  @UseJwtAuth()
-  @RequireRoles('admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete catalog item (Admin only)' })
   @ApiParam({ name: 'id', description: 'Catalog item UUID' })
@@ -217,8 +206,8 @@ export class CatalogController {
   // ===== Type-specific Creation Endpoints (Optional - for better type safety) =====
 
   @Post('silhouettes')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Create a new silhouette (Admin only)' })
   @ApiResponse({
     status: 201,
@@ -234,8 +223,8 @@ export class CatalogController {
   }
 
   @Post('fabrics')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Create a new fabric (Admin only)' })
   @ApiResponse({
     status: 201,
@@ -251,8 +240,8 @@ export class CatalogController {
   }
 
   @Post('patterns')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Create a new pattern (Admin only)' })
   @ApiResponse({
     status: 201,
@@ -268,8 +257,8 @@ export class CatalogController {
   }
 
   @Post('elements')
-  @UseJwtAuth()
-  @RequireRoles('admin', 'catalog_manager')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'catalog_manager')
   @ApiOperation({ summary: 'Create a new design element (Admin only)' })
   @ApiResponse({
     status: 201,

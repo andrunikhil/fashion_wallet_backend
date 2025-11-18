@@ -14,27 +14,26 @@ export class CreateCatalogMaterializedViews1732200000000
       SELECT
         ci.id,
         ci.name,
-        ci.brand_id,
+        ci.brand_partner_id,
         ci.category,
         ci.subcategory,
-        ci.images,
+        ci.thumbnail_url,
+        ci.preview_images,
         ci.is_active,
-        COALESCE(SUM(ia.view_count), 0) as total_views,
-        COALESCE(SUM(ia.favorite_count), 0) as total_favorites,
-        COALESCE(SUM(ia.share_count), 0) as total_shares,
-        COALESCE(SUM(ia.try_on_count), 0) as total_try_ons,
+        COALESCE(SUM(CASE WHEN ia.event_type = 'view' THEN 1 ELSE 0 END), 0) as total_views,
+        COALESCE(SUM(CASE WHEN ia.event_type = 'favorite' THEN 1 ELSE 0 END), 0) as total_favorites,
+        COALESCE(SUM(CASE WHEN ia.event_type = 'use' THEN 1 ELSE 0 END), 0) as total_uses,
         (
-          COALESCE(SUM(ia.view_count), 0) * 1.0 +
-          COALESCE(SUM(ia.favorite_count), 0) * 3.0 +
-          COALESCE(SUM(ia.share_count), 0) * 2.0 +
-          COALESCE(SUM(ia.try_on_count), 0) * 5.0
+          COALESCE(SUM(CASE WHEN ia.event_type = 'view' THEN 1 ELSE 0 END), 0) * 1.0 +
+          COALESCE(SUM(CASE WHEN ia.event_type = 'favorite' THEN 1 ELSE 0 END), 0) * 3.0 +
+          COALESCE(SUM(CASE WHEN ia.event_type = 'use' THEN 1 ELSE 0 END), 0) * 5.0
         ) as popularity_score,
-        MAX(ia.date) as last_activity_date
+        MAX(ia.created_at) as last_activity_date
       FROM catalog.items ci
-      LEFT JOIN catalog.item_analytics ia ON ci.id = ia.item_id
+      LEFT JOIN catalog.item_analytics ia ON ci.id = ia.catalog_item_id
       WHERE ci.is_active = true
-        AND ia.date >= CURRENT_DATE - INTERVAL '30 days'
-      GROUP BY ci.id, ci.name, ci.brand_id, ci.category, ci.subcategory, ci.images, ci.is_active
+        AND (ia.created_at IS NULL OR ia.created_at >= CURRENT_DATE - INTERVAL '30 days')
+      GROUP BY ci.id, ci.name, ci.brand_partner_id, ci.category, ci.subcategory, ci.thumbnail_url, ci.preview_images, ci.is_active
       ORDER BY popularity_score DESC
     `);
 
@@ -53,21 +52,22 @@ export class CreateCatalogMaterializedViews1732200000000
     await queryRunner.query(`
       CREATE MATERIALIZED VIEW catalog.daily_item_stats AS
       SELECT
-        ia.item_id,
-        ia.date,
-        ia.view_count,
-        ia.favorite_count,
-        ia.share_count,
-        ia.try_on_count,
+        ia.catalog_item_id,
+        DATE(ia.created_at) as date,
+        SUM(CASE WHEN ia.event_type = 'view' THEN 1 ELSE 0 END) as view_count,
+        SUM(CASE WHEN ia.event_type = 'favorite' THEN 1 ELSE 0 END) as favorite_count,
+        SUM(CASE WHEN ia.event_type = 'use' THEN 1 ELSE 0 END) as use_count,
+        SUM(CASE WHEN ia.event_type = 'search' THEN 1 ELSE 0 END) as search_count,
         ci.name as item_name,
         ci.category,
         ci.subcategory,
         bp.name as brand_name
       FROM catalog.item_analytics ia
-      JOIN catalog.items ci ON ia.item_id = ci.id
-      LEFT JOIN catalog.brand_partners bp ON ci.brand_id = bp.id
-      WHERE ia.date >= CURRENT_DATE - INTERVAL '90 days'
-      ORDER BY ia.date DESC, ia.view_count DESC
+      JOIN catalog.items ci ON ia.catalog_item_id = ci.id
+      LEFT JOIN catalog.brand_partners bp ON ci.brand_partner_id = bp.id
+      WHERE ia.created_at >= CURRENT_DATE - INTERVAL '90 days'
+      GROUP BY ia.catalog_item_id, DATE(ia.created_at), ci.name, ci.category, ci.subcategory, bp.name
+      ORDER BY date DESC, view_count DESC
     `);
 
     // Create indexes on daily stats view
@@ -78,7 +78,7 @@ export class CreateCatalogMaterializedViews1732200000000
 
     await queryRunner.query(`
       CREATE INDEX idx_daily_stats_item
-      ON catalog.daily_item_stats(item_id, date DESC)
+      ON catalog.daily_item_stats(catalog_item_id, date DESC)
     `);
 
     await queryRunner.query(`
@@ -92,28 +92,29 @@ export class CreateCatalogMaterializedViews1732200000000
       SELECT
         ci.id,
         ci.name,
-        ci.brand_id,
+        ci.brand_partner_id,
         ci.category,
         ci.subcategory,
-        ci.images,
-        COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 7 THEN ia.view_count ELSE 0 END), 0) as views_last_7_days,
-        COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 7 THEN ia.favorite_count ELSE 0 END), 0) as favorites_last_7_days,
-        COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 30 THEN ia.view_count ELSE 0 END), 0) as views_last_30_days,
+        ci.thumbnail_url,
+        ci.preview_images,
+        COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 7 AND ia.event_type = 'view' THEN 1 ELSE 0 END), 0) as views_last_7_days,
+        COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 7 AND ia.event_type = 'favorite' THEN 1 ELSE 0 END), 0) as favorites_last_7_days,
+        COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 30 AND ia.event_type = 'view' THEN 1 ELSE 0 END), 0) as views_last_30_days,
         -- Calculate trend score: recent activity weighted more heavily
         (
-          COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 7 THEN ia.view_count * 3.0 ELSE 0 END), 0) +
-          COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 7 THEN ia.favorite_count * 5.0 ELSE 0 END), 0) +
-          COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 7 THEN ia.try_on_count * 7.0 ELSE 0 END), 0)
+          COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 7 AND ia.event_type = 'view' THEN 3.0 ELSE 0 END), 0) +
+          COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 7 AND ia.event_type = 'favorite' THEN 5.0 ELSE 0 END), 0) +
+          COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 7 AND ia.event_type = 'use' THEN 7.0 ELSE 0 END), 0)
         ) as trend_score
       FROM catalog.items ci
-      LEFT JOIN catalog.item_analytics ia ON ci.id = ia.item_id
+      LEFT JOIN catalog.item_analytics ia ON ci.id = ia.catalog_item_id
       WHERE ci.is_active = true
-        AND ia.date >= CURRENT_DATE - INTERVAL '30 days'
-      GROUP BY ci.id, ci.name, ci.brand_id, ci.category, ci.subcategory, ci.images
+        AND (ia.created_at IS NULL OR ia.created_at >= CURRENT_DATE - INTERVAL '30 days')
+      GROUP BY ci.id, ci.name, ci.brand_partner_id, ci.category, ci.subcategory, ci.thumbnail_url, ci.preview_images
       HAVING (
-        COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 7 THEN ia.view_count * 3.0 ELSE 0 END), 0) +
-        COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 7 THEN ia.favorite_count * 5.0 ELSE 0 END), 0) +
-        COALESCE(SUM(CASE WHEN ia.date >= CURRENT_DATE - 7 THEN ia.try_on_count * 7.0 ELSE 0 END), 0)
+        COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 7 AND ia.event_type = 'view' THEN 3.0 ELSE 0 END), 0) +
+        COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 7 AND ia.event_type = 'favorite' THEN 5.0 ELSE 0 END), 0) +
+        COALESCE(SUM(CASE WHEN ia.created_at >= CURRENT_DATE - 7 AND ia.event_type = 'use' THEN 7.0 ELSE 0 END), 0)
       ) > 0
       ORDER BY trend_score DESC
     `);
@@ -155,13 +156,13 @@ export class CreateCatalogMaterializedViews1732200000000
     `);
 
     await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS idx_analytics_date_item
-      ON catalog.item_analytics(date DESC, item_id)
+      CREATE INDEX IF NOT EXISTS idx_analytics_created_item
+      ON catalog.item_analytics(created_at DESC, catalog_item_id)
     `);
 
     await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS idx_analytics_item_date
-      ON catalog.item_analytics(item_id, date DESC)
+      CREATE INDEX IF NOT EXISTS idx_analytics_item_created
+      ON catalog.item_analytics(catalog_item_id, created_at DESC)
     `);
 
     await queryRunner.query(`
@@ -170,14 +171,14 @@ export class CreateCatalogMaterializedViews1732200000000
     `);
 
     await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS idx_collection_items_collection
-      ON catalog.collection_items(collection_id, position)
+      CREATE INDEX IF NOT EXISTS idx_collection_items_collection_order
+      ON catalog.collection_items(collection_id, order_index)
     `);
 
     // Create composite indexes for common query patterns
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS idx_items_brand_category_active
-      ON catalog.items(brand_id, category, is_active)
+      ON catalog.items(brand_partner_id, category, is_active)
     `);
 
     await queryRunner.query(`
@@ -216,11 +217,11 @@ export class CreateCatalogMaterializedViews1732200000000
     `);
 
     await queryRunner.query(`
-      DROP INDEX IF EXISTS catalog.idx_analytics_date_item
+      DROP INDEX IF EXISTS catalog.idx_analytics_created_item
     `);
 
     await queryRunner.query(`
-      DROP INDEX IF EXISTS catalog.idx_analytics_item_date
+      DROP INDEX IF EXISTS catalog.idx_analytics_item_created
     `);
 
     await queryRunner.query(`
@@ -228,7 +229,7 @@ export class CreateCatalogMaterializedViews1732200000000
     `);
 
     await queryRunner.query(`
-      DROP INDEX IF EXISTS catalog.idx_collection_items_collection
+      DROP INDEX IF EXISTS catalog.idx_collection_items_collection_order
     `);
 
     await queryRunner.query(`
